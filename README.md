@@ -1,5 +1,5 @@
 # FEPOPS(feature point pharmacophores)
-Python implementation of the FEPOPS molecular similarity method and descriptor generator. The FEPOPS descriptors is a 3D method of molecular representation by four centroids with five pharmacophoric features (i.e. atomic logP, atomic partial charges, hydrogen bond acceptors, hydrogen bond donors, and 6 distances between the four centroids). This implementation was recreated following the original paper[https://pubs.acs.org/doi/10.1021/jm049654z
+Python implementation of the FEPOPS molecular similarity method and descriptor generator. The FEPOPS descriptors is a 3D method of molecular representation by four centroids with five pharmacophoric features (i.e. atomic logP, atomic partial charges, hydrogen bond acceptors, hydrogen bond donors, and 6 distances between the four centroids). This implementation was recreated following the original paper[https://pubs.acs.org/doi/10.1021/jm049654z]
 
 ### Steps for implementation:
 1. Preprocessing: Molecules were filtered by the number of atoms (< 4), the number of rings (> 9), and the number of rotatable bonds (< 40). A salt/ions filter was then applied. Filtering carried out using `mol_filter.py`.
@@ -29,7 +29,7 @@ A quickstart example to calculate the FEPOPS similarity between two molecules us
 python fepops.py cal_sim -ismi1 "O=C1OC2=CC3(C)C(CC4OC(=O)C(OC(=O)C)C5C6(OCC45C3C(O)C6O)C(=O)OC)C(C2=C1)C" -ismi2 "OC=1C=C(O)C=C(C1)C=2OC=3C=CC=CC3C2"
 ```
 
-An example of filtering molecules in the dataset of natural products: `COCONUT.DB.smi`, for further use of the FEPOPS generation:
+An example of filtering molecules in the dataset of natural products: `COCONUT.DB.smi`[https://coconut.naturalproducts.net/download], for further use of the FEPOPS generation:
 ```
 python mol_filter.py
 ```
