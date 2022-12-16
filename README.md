@@ -1,5 +1,5 @@
 # FEPOPS(feature point pharmacophores)
-Python implementation of the FEPOPS molecular similarity method and descriptor generator. The FEPOPS descriptors is a 3D method of molecular representation by four centroids with five pharmacophoric features (i.e. atomic logP, atomic partial charges, hydrogen bond acceptors, hydrogen bond donors, and 6 distances between the four centroids). This implementation was recreated following the original paper: [https://pubs.acs.org/doi/10.1021/jm049654z] (https://pubs.acs.org/doi/10.1021/jm049654z)
+Python implementation of the FEPOPS molecular similarity method and descriptor generator. The FEPOPS descriptors is a 3D method of molecular representation by four centroids with five pharmacophoric features (i.e. atomic logP, atomic partial charges, hydrogen bond acceptors, hydrogen bond donors, and 6 distances between the four centroids). This implementation was recreated following the original paper: [https://pubs.acs.org/doi/10.1021/jm049654z](https://pubs.acs.org/doi/10.1021/jm049654z)
 
 ### Steps for implementation:
 1. Preprocessing: Molecules were filtered by the number of atoms (< 4), the number of rings (> 9), and the number of rotatable bonds (< 40). A salt/ions filter was then applied. Filtering carried out using `mol_filter.py`.
