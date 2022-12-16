@@ -34,7 +34,7 @@ An example of filtering molecules in the dataset of natural products: `COCONUT.D
 python mol_filter.py
 ```
 
-This implemetation is also importable and callable within custom scripts for the FEPOPS generation of a batch of molecules, for example:
+This implemetation is also importable and callable within custom scripts for the FEPOPS generation of a batch of molecules. For example:
 ```
 import sys
 from rdkit import Chem
