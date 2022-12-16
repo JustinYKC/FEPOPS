@@ -11,7 +11,7 @@ Python implementation of the FEPOPS molecular similarity method and descriptor g
 7. Calculate FEPOPS similarity: The FEPOPS similarity between two molecules is measured by Pearson correlation between two FEPOPS descriptors after transformation of each to sum to zero and have a variance of 1 (codes in `fepops.py`). 
 
 # Requirements
-This FEPOPS implemetation requires the following packages:
+This FEPOPS implementation requires the following packages:
 - rdkit (>=2019.09.x.x)
 - numpy (>=1.19.x)
 - pandas (>=0.24.x)
