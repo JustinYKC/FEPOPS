@@ -29,7 +29,7 @@ A quickstart example to calculate the FEPOPS similarity between two molecules us
 python fepops.py cal_sim -ismi1 "O=C1OC2=CC3(C)C(CC4OC(=O)C(OC(=O)C)C5C6(OCC45C3C(O)C6O)C(=O)OC)C(C2=C1)C" -ismi2 "OC=1C=C(O)C=C(C1)C=2OC=3C=CC=CC3C2"
 ```
 
-An example of filtering molecules in the dataset of natural products: `COCONUT.DB.smi` [https://coconut.naturalproducts.net/download] (COCONUT.DB.smi), for further use of the FEPOPS generation:
+An example of filtering molecules in the dataset of natural products: `COCONUT.DB.smi` [COCONUT.DB.smi](https://coconut.naturalproducts.net/download), for further use of the FEPOPS generation:
 ```
 python mol_filter.py
 ```
