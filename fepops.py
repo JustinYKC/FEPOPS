@@ -134,11 +134,6 @@ class Fepops():
     """
     return sum([v for k, v in feature_dict.items() if k in centroid_atom_idx])
 
-  #def _identify_hba_hbd(self, mol:Chem.rdchem.Mol) -> tuple:
-    #donor = Chem.MolFromSmarts('[!H0;#7,#8,#9]')
-    #acceptor = Chem.MolFromSmarts("[!$([#6,F,Cl,Br,I,o,s,nX3,#7v5,#15v5,#16v4,#16v6,*+1,*+2,*+3])]")
-    #return (mol.GetSubstructMatches(acceptor), mol.GetSubstructMatches(donor))
-
   def _get_dihedrals(self, mol:Chem.rdchem.Mol) -> tuple:
     """Identify dihedrals in order to obtain rotatable bonds in a molecule
 
