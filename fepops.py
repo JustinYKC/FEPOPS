@@ -341,15 +341,14 @@ class Fepops():
     np.array
       A Numpy array containing the calculated Fepops descriptors of an input molecule.
     """
-    f = Fepops()
-    tautomers_list = f._get_tautomers(Chem.MolFromSmiles(smiles_string))
+    tautomers_list = self._get_tautomers(Chem.MolFromSmiles(smiles_string))
     each_mol_with_all_confs_list=[]
     for index, t_mol in enumerate(tautomers_list):
-      conf_list = f.generate_conformers(t_mol)
+      conf_list = self.generate_conformers(t_mol)
       each_mol_with_all_confs_list.extend(conf_list)
 
     for index, each_mol in enumerate(each_mol_with_all_confs_list):
-      pharmacophore_feature = f.get_centroid_pharmacophoric_features(each_mol)
+      pharmacophore_feature = self.get_centroid_pharmacophoric_features(each_mol)
       if index == 0: 
         pharmacophore_feature_all_confs = pharmacophore_feature
         continue
