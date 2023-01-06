@@ -56,7 +56,7 @@ class Fepops():
       for i in range(k):
           medoid_members = input_x[point_to_centroid_map == i]
           if len(medoid_members) == 0:
-            chosen_x_point = np.choice(np.arange(input_x.shape[0]))
+            chosen_x_point = np.random.choice(np.arange(input_x.shape[0]))
             medoids[i] = input_x[chosen_x_point, :]
             point_to_centroid_map[chosen_x_point] = i
           medoids[i] = np.median(input_x[point_to_centroid_map == i], axis=0) #Using median to ensure the minimum distance to its medoid_members to be returned
