@@ -21,7 +21,7 @@ This FEPOPS implementation requires the following packages:
 # Usage
 A quickstart example to generate the FEPOPS descriptors for a molecule directly from its SMILES as follows: In terminal:
 ```
-python python fepops.py get_fepops -ismi "O=C1OC2=CC3(C)C(CC4OC(=O)C(OC(=O)C)C5C6(OCC45C3C(O)C6O)C(=O)OC)C(C2=C1)C" 
+python fepops.py get_fepops -ismi "O=C1OC2=CC3(C)C(CC4OC(=O)C(OC(=O)C)C5C6(OCC45C3C(O)C6O)C(=O)OC)C(C2=C1)C" 
 ```
 
 A quickstart example to calculate the FEPOPS similarity between two molecules using their SMILES as follows: In terminal:
