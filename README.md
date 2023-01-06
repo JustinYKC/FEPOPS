@@ -7,7 +7,7 @@ Python implementation of the FEPOPS molecular similarity method and descriptor g
 3. Sample conformers through rotation of flexible bonds: Each tautomer underwent conformer generation, changing the angles of all rotatable bonds. Up to 1024 conformers are sampled from the pool of conformers if more than 5 rotatable bonds are found in a molecule (codes in `fepops.py`).
 4. Calculate the 4 centroids: 4 centroids were calculated using K-means for each sampled conformer. With these 4 centroids, each conformer was represented as a 4-point molecular representation with each atom clustered into one of these 4 centroid groups (codes in `fepops.py`).
 5. Calculate and assign pharmacophoric features: Each of the four centroids was assigned five pharmacophoric features from their atom cluster members (codes in `fepops.py`).
-6. Select most representitive conformers: The FEPOPS conformers were further clustered by K-medoids to find a small number of representative conformers for each molecule (codes in `fepops.py`).
+6. Select most representitive conformers: The FEPOPS conformers were further clustered by k-medoids to find a small number of representative conformers for each molecule (codes in `fepops.py`).
 7. Calculate FEPOPS similarity: The FEPOPS similarity between two molecules is measured by Pearson correlation between two FEPOPS descriptors after transformation of each to sum to zero and have a variance of 1 (codes in `fepops.py`). 
 
 # Requirements
@@ -34,7 +34,7 @@ An example of filtering molecules in the dataset of natural products: `COCONUT.D
 python mol_filter.py
 ```
 
-This implemetation is also importable and callable within custom scripts for the FEPOPS generation of a batch of molecules. For example:
+This implementation is also importable and callable within custom scripts for the FEPOPS generation of a batch of molecules. For example:
 ```
 import sys
 from rdkit import Chem
