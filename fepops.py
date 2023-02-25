@@ -7,7 +7,9 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from scipy.spatial.distance import cdist
 import numpy as np
-import random, itertools, argparse
+import sys, random, itertools, argparse
+import torch
+import kmeans_pytorch
 
 class Fepops():
   """Fepops molecular similarity object
@@ -277,6 +279,25 @@ class Fepops():
     """
     for dihedral_atoms, torsion_angle_multiplier, orig_torsion_angle in zip(dihedrals, bond_state, starting_angles):
       rdMolTransforms.SetDihedralDeg(conformer, *dihedral_atoms, orig_torsion_angle+torsion_angle_multiplier*90.0)
+
+  def _perform_kmeans(self, mol:Chem.rdchem.Mol, num_centroids:int=4, kmeans_methods:str='torch_cpu') -> tuple:
+    mol_coors = mol.GetConformer(0).GetPositions()
+    if kmeans_methods == 'sklearn':
+      kmeans = KMeans(n_clusters=num_centroids, random_state=0).fit(mol_coors)
+      centroid_coors = kmeans.cluster_centers_
+      instance_cluster_labels = kmeans.labels_
+    if kmeans_methods.startswith('torch_'):
+      mol_coors_torch = torch.from_numpy(mol_coors)
+      if kmeans_methods == 'torch_gpu':
+        instance_cluster_labels, centroid_coors = kmeans_pytorch.kmeans(X=mol_coors_torch, num_clusters=num_centroids, distance='euclidean', device=torch.device('cuda:0'))
+      if kmeans_methods == 'torch_cpu':
+        instance_cluster_labels, centroid_coors = kmeans_pytorch.kmeans(X=mol_coors_torch, num_clusters=num_centroids, distance='euclidean', device=torch.device('cpu'))
+      instance_cluster_labels = instance_cluster_labels.numpy()
+      centroid_coors = centroid_coors.numpy()
+    else: 
+      print ("The method selected for the k-means calculation is invalid, please use the valid format in terms of 'sklearn', 'torch_cpu', or 'torch_gpu'")
+      sys.exit(-1)
+    return centroid_coors, instance_cluster_labels
   
   def get_centroid_pharmacophoric_features(self, mol:Chem.rdchem.Mol, num_centroids:int=4) -> np.array:
     """Obtain the four centroids and their corresponding pharmacophoric features
@@ -296,9 +317,7 @@ class Fepops():
     np.array
       A Numpy array containing 22 pharmacophoric features for all conformers.
     """
-    mol_coors = mol.GetConformer(0).GetPositions()
-    kmeans = KMeans(n_clusters=num_centroids, random_state=0).fit(mol_coors)
-    centroid_coors = kmeans.cluster_centers_
+    centroid_coors, instance_cluster_labels = self._perform_kmeans(mol, num_centroids, "torch_cpu")
     centroid_dist_arr = cdist(centroid_coors, centroid_coors)
     centroid_dist = list(centroid_dist_arr[np.triu_indices_from(centroid_dist_arr, k=1)])
     
@@ -310,7 +329,7 @@ class Fepops():
     pharmacophore_features_arr = np.array([], ndmin=1)
     for centroid in range(num_centroids):
       hba, hbd = 0.0, 0.0
-      centroid_atomic_id = np.where(kmeans.labels_== centroid)[0]
+      centroid_atomic_id = np.where(instance_cluster_labels == centroid)[0]
       sum_of_logP = self._sum_of_atomic_features_by_centroids(atomic_logP_dict, centroid_atomic_id)
       sum_of_charge = self._sum_of_atomic_features_by_centroids(atomic_charge_dict, centroid_atomic_id)
       if len(hb_acceptors.intersection(set(centroid_atomic_id))) > 0: hba=1
