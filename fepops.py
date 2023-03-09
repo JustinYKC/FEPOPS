@@ -184,27 +184,45 @@ class Fepops:
     def _perform_kmeans(
         self, mol:Chem.rdchem.Mol, num_centroids:int=4, kmeans_methods:str='torch_cpu'
     ) -> tuple:
-      mol_coors = mol.GetConformer(0).GetPositions()
-      if kmeans_methods == 'sklearn':
-        kmeans = KMeans(n_clusters=num_centroids, random_state=0).fit(mol_coors)
-        centroid_coors = kmeans.cluster_centers_
-        instance_cluster_labels = kmeans.labels_
-      if kmeans_methods.startswith('torch_'):
-        mol_coors_torch = torch.from_numpy(mol_coors)
-        if kmeans_methods == 'torch_gpu':
-          instance_cluster_labels, centroid_coors = kmeans_pytorch.kmeans(
-            X=mol_coors_torch, num_clusters=num_centroids, distance='euclidean', device=torch.device('cuda:0')
-          )
-        if kmeans_methods == 'torch_cpu':
-          instance_cluster_labels, centroid_coors = kmeans_pytorch.kmeans(
-            X=mol_coors_torch, num_clusters=num_centroids, distance='euclidean', device=torch.device('cpu')
-          )
-        instance_cluster_labels = instance_cluster_labels.numpy()
-        centroid_coors = centroid_coors.numpy()
-      else: 
-        print ("The method selected for the k-means calculation is invalid, please use the valid format in terms of 'sklearn', 'torch_cpu', or 'torch_gpu'")
-        sys.exit(-1)
-      return centroid_coors, instance_cluster_labels
+        """Perform kmeans calculation
+
+        Carry out kmeans calcaultion based on a given kmeans method and number of centroids.
+
+        Parameters
+        ----------
+        mol : Chem.rdchem.Mol
+                The Rdkit mol object of the input molecule.
+        num_centroids : int
+                The number of centoids used for clustering. By default 4.
+        kmeans_method : str
+                Method used to perform the kmeans calculation. By default 'torch_cpu'.
+
+        Returns
+        -------
+        tuple
+                A tuple containing the centroid coordinates and the cluster labels of molecular atoms.
+        """
+        mol_coors = mol.GetConformer(0).GetPositions()
+        if kmeans_methods == 'sklearn':
+            kmeans = KMeans(n_clusters=num_centroids, random_state=0).fit(mol_coors)
+            centroid_coors = kmeans.cluster_centers_
+            instance_cluster_labels = kmeans.labels_
+        elif kmeans_methods == 'torch_gpu' or kmeans_methods == 'torch_cpu':
+            mol_coors_torch = torch.from_numpy(mol_coors)
+            if kmeans_methods == 'torch_gpu':
+                instance_cluster_labels, centroid_coors = kmeans_pytorch.kmeans(
+                X = mol_coors_torch, num_clusters=num_centroids, distance='euclidean', device=torch.device('cuda:0')
+        )
+            if kmeans_methods == 'torch_cpu':
+                instance_cluster_labels, centroid_coors = kmeans_pytorch.kmeans(
+                X = mol_coors_torch, num_clusters=num_centroids, distance='euclidean', device=torch.device('cpu')
+        )
+            instance_cluster_labels = instance_cluster_labels.numpy()
+            centroid_coors = centroid_coors.numpy()
+        else: 
+            print ("The method selected for the k-means calculation is invalid, please use the valid format in terms of 'sklearn', 'torch_cpu', or 'torch_gpu'")
+            sys.exit(-1)
+        return centroid_coors, instance_cluster_labels
 
     def _get_flanking_atoms(
         self, bonds: Chem.rdchem._ROBondSeq, atom_1_idx: int, atom_2_idx: int
