@@ -188,7 +188,7 @@ class Fepops:
         return dihedrals
     
     def _perform_kmeans(
-        self, mol:Chem.rdchem.Mol, num_centroids:int=4, kmeans_methods:str='torch_cpu'
+        self, mol: Chem.rdchem.Mol, num_centroids: int=4, kmeans_methods: str='torch_cpu'
     ) -> tuple:
         """Perform kmeans calculation
 
@@ -231,12 +231,12 @@ class Fepops:
         return centroid_coors, instance_cluster_labels
     
     def _sort_kmeans_centroid(
-        self, pharmacophore_features_arr:np.array, sort_by_features:str='charge'
+        self, pharmacophore_features_arr: np.array, sort_by_features: str='charge'
     ) -> np.array:
         sort_index = self.sort_by_features_col_index_dict[sort_by_features]
         return pharmacophore_features_arr[:, sort_index].argsort()
     
-    def _get_centroid_dist(self, centroid_dist_arr:np.array) -> list:
+    def _get_centroid_dist(self, centroid_dist_arr: np.array) -> list:
         centroid_dist = []
         arr_row, arr_col = centroid_dist_arr.shape[0], centroid_dist_arr.shape[1]
         for row in range(arr_row):
