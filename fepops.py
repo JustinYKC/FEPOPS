@@ -28,6 +28,12 @@ class Fepops:
         self.rotatable_bond_from_smarts = Chem.MolFromSmarts(
             "[!$(*#*)&!D1]-&!@[!$(*#*)&!D1]"
         )
+        self.sort_by_features_col_index_dict = {
+            "charge": 0,
+            "logP": 1,
+            "hba": 2,
+            "hbd": 3
+        }
         self.scaler = StandardScaler()
 
     def _get_k_medoids(self, input_x: np.array, k: int = 7) -> np.array:
@@ -223,6 +229,26 @@ class Fepops:
             print ("The method selected for the k-means calculation is invalid, please use the valid format in terms of 'sklearn', 'torch_cpu', or 'torch_gpu'")
             sys.exit(-1)
         return centroid_coors, instance_cluster_labels
+    
+    def _sort_kmeans_centroid(
+        self, pharmacophore_features_arr:np.array, sort_by_features:str='charge'
+    ) -> np.array:
+        sort_index = self.sort_by_features_col_index_dict[sort_by_features]
+        return pharmacophore_features_arr[:, sort_index].argsort()
+    
+    def _get_centroid_dist(self, centroid_dist_arr:np.array) -> list:
+        centroid_dist = []
+        arr_row, arr_col = centroid_dist_arr.shape[0], centroid_dist_arr.shape[1]
+        for row in range(arr_row):
+            i, j = row, 0
+            while i < arr_row and j < arr_col and centroid_dist_arr[i][j] != 0:
+                if i == arr_row-1 and j == 0:
+                    centroid_dist.insert(0, centroid_dist_arr[i][j])
+                else:
+                    centroid_dist.append(centroid_dist_arr[i][j])
+                i+=1 
+                j+=1
+        return centroid_dist
 
     def _get_flanking_atoms(
         self, bonds: Chem.rdchem._ROBondSeq, atom_1_idx: int, atom_2_idx: int
@@ -404,7 +430,7 @@ class Fepops:
             i[0] for i in mol.GetSubstructMatches(self.donor_mol_from_smarts)
         )
 
-        pharmacophore_features_arr = np.array([], ndmin=1)
+        pharmacophore_features_arr = np.empty(shape=[0, 4])
         for centroid in range(num_centroids):
             hba, hbd = 0.0, 0.0
             centroid_atomic_id = np.where(instance_cluster_labels == centroid)[0]
@@ -418,10 +444,14 @@ class Fepops:
                 hba = 1
             if len(hb_donors.intersection(set(centroid_atomic_id))) > 0:
                 hbd = 1
-            pharmacophore_features_arr = np.append(
-                pharmacophore_features_arr, [sum_of_logP, sum_of_charge, hba, hbd]
+            pharmacophore_features_arr = np.vstack(
+                (pharmacophore_features_arr, [sum_of_charge, sum_of_logP, hbd, hba])
             )
-
+        sorted_index_rank_arr = self._sort_kmeans_centroid(pharmacophore_features_arr, 'charge')
+        centroid_coors = centroid_coors[sorted_index_rank_arr]
+        pharmacophore_features_arr = pharmacophore_features_arr[sorted_index_rank_arr]
+        centroid_dist_arr = cdist(centroid_coors, centroid_coors)
+        centroid_dist = self._get_centroid_dist(centroid_dist_arr)
         pharmacophore_features_arr = np.append(
             pharmacophore_features_arr, centroid_dist
         )
