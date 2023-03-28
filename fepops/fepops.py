@@ -20,13 +20,13 @@ class Fepops:
     the original publication for more information. https://pubs.acs.org/doi/10.1021/jm049654z
     """
 
-    def __init__(self, kmeans_method:str = "pytorch-cpu"):
-        self.implemented_kmeans_methods=['sklearn', 'pytorch-gpu', 'pytorch-cpu']
+    def __init__(self, kmeans_method: str = "pytorch-cpu"):
+        self.implemented_kmeans_methods = ["sklearn", "pytorch-gpu", "pytorch-cpu"]
         if kmeans_method not in self.implemented_kmeans_methods:
             raise ValueError(
                 f"Supplied argument kmeans_method '{kmeans_method}' not found, please supply a string denoting an implemented kmeans method from {self.implemented_kmeans_methods}"
-                )
-        self.kmeans_method_str=kmeans_method
+            )
+        self.kmeans_method_str = kmeans_method
         self.tautomer_enumerator = MolStandardize.tautomer.TautomerEnumerator()
         self.donor_mol_from_smarts = Chem.MolFromSmarts("[!H0;#7,#8,#9]")
         self.acceptor_mol_from_smarts = Chem.MolFromSmarts(
@@ -230,12 +230,16 @@ class Fepops:
                 X=mol_coors_torch,
                 num_clusters=num_centroids,
                 distance="euclidean",
-                device=torch.device("cuda:0") if kmeans_method=="pytorch-gpu" else torch.device("cpu"),
+                device=torch.device("cuda:0")
+                if kmeans_method == "pytorch-gpu"
+                else torch.device("cpu"),
             )
             instance_cluster_labels = instance_cluster_labels.numpy()
             centroid_coors = centroid_coors.numpy()
         else:
-            raise ValueError(f"The method selected for the k-means calculation is invalid, please use one of {self.implemented_kmeans_methods}")
+            raise ValueError(
+                f"The method selected for the k-means calculation is invalid, please use one of {self.implemented_kmeans_methods}"
+            )
         return centroid_coors, instance_cluster_labels
 
     def _sort_kmeans_centroid(
@@ -337,7 +341,7 @@ class Fepops:
             rotation_list.add(tuple(rots))
         return list(rotation_list)
 
-    def generate_conformers(self, mol: Chem.rdchem.Mol) -> list:
+    def generate_conformers(self, mol: Chem.rdchem.Mol, random_seed: int = 42) -> list:
         """Generate conformers with rotatable bonds
 
         Generate conformers for a molecule, enumerating rotatable bonds over 90 degree angles.
@@ -345,14 +349,16 @@ class Fepops:
         Parameters
         ----------
         mol : Chem.rdchem.Mol
-                The Rdkit mol object of the input molecule.
+            The Rdkit mol object of the input molecule.
+        random_seed : reproducibility
 
         Returns
         -------
         List
                 A list containing mol objects of different conformers with different angles of rotetable bonds.
         """
-        AllChem.EmbedMolecule(mol, randomSeed=10)
+        mol = Chem.AddHs(mol)
+        AllChem.EmbedMolecule(mol, randomSeed=42)
         original_conformer = mol.GetConformer(0)
         dihedrals = self._get_dihedrals(mol)
         starting_angles = (
@@ -400,7 +406,7 @@ class Fepops:
             rdMolTransforms.SetDihedralDeg(
                 conformer,
                 *dihedral_atoms,
-                orig_torsion_angle + torsion_angle_multiplier * 90.0
+                orig_torsion_angle + torsion_angle_multiplier * 90.0,
             )
 
     def get_centroid_pharmacophoric_features(
@@ -486,9 +492,20 @@ class Fepops:
             A Numpy array containing the calculated Fepops descriptors of an input molecule.
         """
 
-        tautomers_list = self._get_tautomers(
-            Chem.AddHs(Chem.MolFromSmiles(smiles_string))
-        )
+        try:
+            mol = Chem.MolFromSmiles(smiles_string)
+        except:
+            try:
+                mol = Chem.MolFromSmiles(smiles_string, sanitize=False)
+            finally:
+                mol = None
+        if mol is None:
+            raise ValueError(
+                f"Could not parse smiles to a valid molecule, smiles was:{smiles_string}"
+            )
+        mol = Chem.AddHs(mol)
+
+        tautomers_list = self._get_tautomers(mol)
         each_mol_with_all_confs_list = []
         for index, t_mol in enumerate(tautomers_list):
             conf_list = self.generate_conformers(t_mol)
@@ -558,3 +575,6 @@ class Fepops:
         self, query: Union[np.array, str], candidate: Union[np.array, str]
     ) -> float:
         return self.calc_similarity(query, candidate)
+
+    def gen_descriptors(self, smiles):
+        fo
