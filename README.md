@@ -14,9 +14,11 @@ Python implementation of the FEPOPS molecular similarity method and descriptor g
 This FEPOPS implementation requires the following packages:
 - rdkit (>=2019.09.x.x)
 - numpy (>=1.19.x)
-- pandas (>=0.24.x)
+- pandas (>=1.5.0)
 - scikit-learn (>=0.20.x)
 - scipy (>=1.7.x)
+- PyTorch (>= 1.0.0)
+- kmeans-pytorch (>=0.3)
 
 # Usage
 A quickstart example to generate the FEPOPS descriptors for a molecule directly from its SMILES as follows: In terminal:

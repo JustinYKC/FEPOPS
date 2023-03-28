@@ -7,7 +7,10 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from scipy.spatial.distance import cdist, squareform, pdist
 import numpy as np
-import random, itertools, argparse
+import sys, random, itertools, argparse
+import torch
+import kmeans_pytorch
+from typing import Union, Callable
 
 
 class Fepops:
@@ -17,7 +20,13 @@ class Fepops:
     the original publication for more information. https://pubs.acs.org/doi/10.1021/jm049654z
     """
 
-    def __init__(self):
+    def __init__(self, kmeans_method:str = "pytorch-cpu"):
+        self.implemented_kmeans_methods=['sklearn', 'pytorch-gpu', 'pytorch-cpu']
+        if kmeans_method not in self.implemented_kmeans_methods:
+            raise ValueError(
+                f"Supplied argument kmeans_method '{kmeans_method}' not found, please supply a string denoting an implemented kmeans method from {self.implemented_kmeans_methods}"
+                )
+        self.kmeans_method_str=kmeans_method
         self.tautomer_enumerator = MolStandardize.tautomer.TautomerEnumerator()
         self.donor_mol_from_smarts = Chem.MolFromSmarts("[!H0;#7,#8,#9]")
         self.acceptor_mol_from_smarts = Chem.MolFromSmarts(
@@ -26,6 +35,12 @@ class Fepops:
         self.rotatable_bond_from_smarts = Chem.MolFromSmarts(
             "[!$(*#*)&!D1]-&!@[!$(*#*)&!D1]"
         )
+        self.sort_by_features_col_index_dict = {
+            "charge": 0,
+            "logP": 1,
+            "hba": 2,
+            "hbd": 3,
+        }
         self.scaler = StandardScaler()
 
     def _get_k_medoids(self, input_x: np.array, k: int = 7) -> np.array:
@@ -37,14 +52,14 @@ class Fepops:
         Parameters
         ----------
         input_x : np.array
-                The pharmacophore features of all conformers.
+            The pharmacophore features of all conformers.
         k : int
-                The number of medoids for clustering. By default 7.
+            The number of medoids for clustering. By default 7.
 
         Returns
         -------
         np.array
-                The final Fepops descriptors of the k representative conformers.
+            The final Fepops descriptors of the k representative conformers.
         """
         input_x = np.unique(input_x, axis=0)
 
@@ -88,12 +103,12 @@ class Fepops:
         Parameters
         ----------
         mol : Chem.rdchem.Mol
-                The Rdkit mol object of the input molecule.
+            The Rdkit mol object of the input molecule.
 
         Returns
         -------
         List
-                List containing enumerated tautomers.
+            List containing enumerated tautomers.
         """
         return self.tautomer_enumerator.enumerate(mol)
 
@@ -103,12 +118,12 @@ class Fepops:
         Parameters
         ----------
         mol : Chem.rdchem.Mol
-                The Rdkit mol object of the input molecule.
+            The Rdkit mol object of the input molecule.
 
         Returns
         -------
         dict
-                A dictionary containing all atom symbols with their logP values.
+            A dictionary containing all atom symbols with their logP values.
         """
         return {
             atom.GetIdx(): float(contribution[0])
@@ -123,12 +138,12 @@ class Fepops:
         Parameters
         ----------
         mol : Chem.rdchem.Mol
-                The Rdkit mol object of the input molecule.
+            The Rdkit mol object of the input molecule.
 
         Returns
         -------
         dict
-                A dictionary containing all atom symobls with their charges.
+            A dictionary containing all atom symobls with their charges.
         """
         Chem.rdPartialCharges.ComputeGasteigerCharges(mol)
         return {
@@ -146,14 +161,14 @@ class Fepops:
         Parameters
         ----------
         feature_dict : dict
-                A dictionary containing the atomic features.
+            A dictionary containing the atomic features.
         centroid_atom_idx : np.array
-                A Numpy array containing the label of the centroid index for each atom.
+            A Numpy array containing the label of the centroid index for each atom.
 
         Returns
         -------
         int
-                Sum of the features across the centroid group of atoms.
+            Sum of the features across the centroid group of atoms.
         """
         return sum([v for k, v in feature_dict.items() if k in centroid_atom_idx])
 
@@ -165,12 +180,12 @@ class Fepops:
         Parameters
         ----------
         mol : Chem.rdchem.Mol
-                The Rdkit mol object of the input molecule.
+            The Rdkit mol object of the input molecule.
 
         Returns
         -------
         tuple
-                A tuple containing all identified dihedrals with the index of their four defined atoms.
+            A tuple containing all identified dihedrals with the index of their four defined atoms.
         """
         dihedrals = []
         for atom_j, atom_k in mol.GetSubstructMatches(self.rotatable_bond_from_smarts):
@@ -178,6 +193,70 @@ class Fepops:
             if atom_i is not None and atom_l is not None:
                 dihedrals.append((atom_i, atom_j, atom_k, atom_l))
         return dihedrals
+
+    def _perform_kmeans(
+        self,
+        mol: Chem.rdchem.Mol,
+        num_centroids: int = 4,
+        kmeans_method: str = "pytorch-cpu",
+    ) -> tuple:
+        """Perform kmeans calculation
+
+        Carry out kmeans calcaultion based on a given kmeans method and number of centroids.
+
+        Parameters
+        ----------
+        mol : Chem.rdchem.Mol
+            The Rdkit mol object of the input molecule.
+        num_centroids : int
+            The number of centoids used for clustering. By default 4.
+        kmeans_method : str
+            Method used to perform the kmeans calculation. Can be 'sklearn',
+            'pytorch-gpu', or 'pytorch-cpu'. By default 'kmeans-pytorch-cpu'.
+
+        Returns
+        -------
+        tuple
+            A tuple containing the centroid coordinates and the cluster labels of molecular atoms.
+        """
+        mol_coors = mol.GetConformer(0).GetPositions()
+        if kmeans_method == "sklearn":
+            kmeans = KMeans(n_clusters=num_centroids, random_state=0).fit(mol_coors)
+            centroid_coors = kmeans.cluster_centers_
+            instance_cluster_labels = kmeans.labels_
+        elif kmeans_method in ["pytorch-gpu", "pytorch-cpu"]:
+            mol_coors_torch = torch.from_numpy(mol_coors)
+            instance_cluster_labels, centroid_coors = kmeans_pytorch.kmeans(
+                X=mol_coors_torch,
+                num_clusters=num_centroids,
+                distance="euclidean",
+                device=torch.device("cuda:0") if kmeans_method=="pytorch-gpu" else torch.device("cpu"),
+            )
+            instance_cluster_labels = instance_cluster_labels.numpy()
+            centroid_coors = centroid_coors.numpy()
+        else:
+            raise ValueError(f"The method selected for the k-means calculation is invalid, please use one of {self.implemented_kmeans_methods}")
+        return centroid_coors, instance_cluster_labels
+
+    def _sort_kmeans_centroid(
+        self, pharmacophore_features_arr: np.array, sort_by_features: str = "charge"
+    ) -> np.array:
+        sort_index = self.sort_by_features_col_index_dict[sort_by_features]
+        return pharmacophore_features_arr[:, sort_index].argsort()
+
+    def _get_centroid_dist(self, centroid_dist_arr: np.array) -> list:
+        centroid_dist = []
+        arr_row, arr_col = centroid_dist_arr.shape[0], centroid_dist_arr.shape[1]
+        for row in range(arr_row):
+            i, j = row, 0
+            while i < arr_row and j < arr_col and centroid_dist_arr[i][j] != 0:
+                if i == arr_row - 1 and j == 0:
+                    centroid_dist.insert(0, centroid_dist_arr[i][j])
+                else:
+                    centroid_dist.append(centroid_dist_arr[i][j])
+                i += 1
+                j += 1
+        return centroid_dist
 
     def _get_flanking_atoms(
         self, bonds: Chem.rdchem._ROBondSeq, atom_1_idx: int, atom_2_idx: int
@@ -189,16 +268,16 @@ class Fepops:
         Parameters
         ----------
         bonds : Chem.rdchem._ROBondSeq
-                The Rdkit molecule bond object that contains the indexes of both begin and end atoms in a bond.
+            The Rdkit molecule bond object that contains the indexes of both begin and end atoms in a bond.
         atom_1_idx : int
-                The index of the first atom in a rotatable bond.
+            The index of the first atom in a rotatable bond.
         atom_2_inx : int
-                The index of the second atom in a rotatable bond.
+            The index of the second atom in a rotatable bond.
 
         Returns
         -------
         tuple
-                A tuple containing the indexes of two flanking atoms for the given atoms of a rotatable bond.
+            A tuple containing the indexes of two flanking atoms for the given atoms of a rotatable bond.
         """
         bound_to_atom_1 = None
         bound_to_atom_2 = None
@@ -239,12 +318,12 @@ class Fepops:
         Parameters
         ----------
         n_nor : int
-                The number of rotatable bonds in a molecule.
+            The number of rotatable bonds in a molecule.
 
         Returns
         -------
         List
-                A list containing the sampled bond states (rotation angles) for all of the rotatable bonds of a molecule.
+            A list containing the sampled bond states (rotation angles) for all of the rotatable bonds of a molecule.
         """
         if n_rot <= 5:
             return list(itertools.product(range(4), repeat=n_rot))
@@ -306,14 +385,14 @@ class Fepops:
         Parameters
         ----------
         conformer : Chem.rdchem.Conformer
-                The Rdkit conformer object.
+            The Rdkit conformer object.
         dihedrals : tuple
-                A tuple containing all identified dihedrals with the index of their four defined atoms.
+            A tuple containing all identified dihedrals with the index of their four defined atoms.
         starting_angles : tuple
-                A tuple containing the orignal states (dihedral angles) of all the rotatable bond before rotating.
+            A tuple containing the orignal states (dihedral angles) of all the rotatable bond before rotating.
         bond_state : tuple
-                A tuple containing a specific bond state (a combination of various rotation angles) for all
-                rotatable bonds of a molecule.
+            A tuple containing a specific bond state (a combination of various rotation angles) for all
+            rotatable bonds of a molecule.
         """
         for dihedral_atoms, torsion_angle_multiplier, orig_torsion_angle in zip(
             dihedrals, bond_state, starting_angles
@@ -335,20 +414,18 @@ class Fepops:
         Parameters
         ----------
         mol : Chem.rdchem.Mol
-                The Rdkit mol object of the input molecule.
+            The Rdkit mol object of the input molecule.
         num_centroids : int
-                The number of centoids used for clustering. By default 4.
+            The number of centoids used for clustering. By default 4.
 
         Returns
         -------
         np.array
-                A Numpy array containing 22 pharmacophoric features for all conformers.
+            A Numpy array containing 22 pharmacophoric features for all conformers.
         """
-        mol_coors = mol.GetConformer(0).GetPositions()
-        kmeans = KMeans(n_clusters=num_centroids, random_state=0, n_init="auto").fit(
-            mol_coors
+        centroid_coors, instance_cluster_labels = self._perform_kmeans(
+            mol, num_centroids, kmeans_method=self.kmeans_method_str
         )
-        centroid_coors = kmeans.cluster_centers_
         centroid_dist_arr = cdist(centroid_coors, centroid_coors)
         centroid_dist = list(
             centroid_dist_arr[np.triu_indices_from(centroid_dist_arr, k=1)]
@@ -363,10 +440,10 @@ class Fepops:
             i[0] for i in mol.GetSubstructMatches(self.donor_mol_from_smarts)
         )
 
-        pharmacophore_features_arr = np.array([], ndmin=1)
+        pharmacophore_features_arr = np.empty(shape=[0, 4])
         for centroid in range(num_centroids):
             hba, hbd = 0.0, 0.0
-            centroid_atomic_id = np.where(kmeans.labels_ == centroid)[0]
+            centroid_atomic_id = np.where(instance_cluster_labels == centroid)[0]
             sum_of_logP = self._sum_of_atomic_features_by_centroids(
                 atomic_logP_dict, centroid_atomic_id
             )
@@ -377,10 +454,16 @@ class Fepops:
                 hba = 1
             if len(hb_donors.intersection(set(centroid_atomic_id))) > 0:
                 hbd = 1
-            pharmacophore_features_arr = np.append(
-                pharmacophore_features_arr, [sum_of_logP, sum_of_charge, hba, hbd]
+            pharmacophore_features_arr = np.vstack(
+                (pharmacophore_features_arr, [sum_of_charge, sum_of_logP, hbd, hba])
             )
-
+        sorted_index_rank_arr = self._sort_kmeans_centroid(
+            pharmacophore_features_arr, "charge"
+        )
+        centroid_coors = centroid_coors[sorted_index_rank_arr]
+        pharmacophore_features_arr = pharmacophore_features_arr[sorted_index_rank_arr]
+        centroid_dist_arr = cdist(centroid_coors, centroid_coors)
+        centroid_dist = self._get_centroid_dist(centroid_dist_arr)
         pharmacophore_features_arr = np.append(
             pharmacophore_features_arr, centroid_dist
         )
@@ -395,12 +478,12 @@ class Fepops:
         Parameters
         ----------
         smiles_string : str
-                SMILES string of an input molecule.
+            SMILES string of an input molecule.
 
         Returns
         -------
         np.array
-                A Numpy array containing the calculated Fepops descriptors of an input molecule.
+            A Numpy array containing the calculated Fepops descriptors of an input molecule.
         """
 
         tautomers_list = self._get_tautomers(
@@ -429,21 +512,21 @@ class Fepops:
         Parameters
         ----------
         x1 : np.array
-                A Numpy array containing the FEPOPS descriptors 1.
+            A Numpy array containing the FEPOPS descriptors 1.
         x2 : np.array
-                A Numpy array containing the FEPOPS descriptors 2.
+            A Numpy array containing the FEPOPS descriptors 2.
 
         Returns
         -------
         float
-                The FEPOPS similarity score (Pearson correlation).
+            The FEPOPS similarity score (Pearson correlation).
         """
         x1 = self.scaler.fit_transform(x1.reshape(-1, 1))
         x2 = self.scaler.fit_transform(x2.reshape(-1, 1))
         return np.corrcoef(x1.flatten(), x2.flatten())[0, 1]
 
     def calc_similarity(
-        self, fepops_features_1: np.array, fepops_features_2: np.array
+        self, query: Union[np.array, str], candidate: Union[np.array, str]
     ) -> float:
         """Calculate FEPOPS similarity
 
@@ -451,62 +534,27 @@ class Fepops:
 
         Parameters
         ----------
-        fepops_features_1 : np.array
-                A Numpy array containing the FEPOPS descriptors of the first molecule
-        fepops_features_2 : np.array
-                A Numpy array containing the FEPOPS descriptors of the second molecule
+        fepops_features_1 : Union[np.array, str]
+            A Numpy array containing the FEPOPS descriptors of the query molecule
+            or a smiles string from which to generate FEPOPS descriptors for the
+            query molecule.
+        fepops_features_2 : Union[np.array, str]
+            A Numpy array containing the FEPOPS descriptors of the candidate
+            molecule or a smiles string from which to generate FEPOPS descriptors
+            for the query molecule.
 
         Returns
         -------
         float
-                Fepops similarity between two molecules
+            Fepops similarity between two molecules
         """
-        return np.max(cdist(fepops_features_1, fepops_features_2, metric=self._score))
+        if isinstance(query, str):
+            query = self.get_fepops(query)
+        if isinstance(candidate, str):
+            candidate = self.get_fepops(candidate)
+        return np.max(cdist(query, candidate, metric=self._score))
 
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Generate the FEPOPS descriptors")
-    subparsers = parser.add_subparsers(
-        dest="subcmd", help="subcommands", metavar="SUBCOMMAND"
-    )
-    subparsers.required = True
-
-    f1_parser = subparsers.add_parser(
-        "get_fepops", help="Generate the FEPOPS descriptors from an input SMILES string"
-    )
-    f1_parser.add_argument(
-        "-ismi",
-        "--input_smiles",
-        help="An input SMILES string of a molecule",
-        dest="insmile",
-        required=True,
-    )
-
-    f2_parser = subparsers.add_parser(
-        "cal_sim", help="Calculate FEPOPS similarity between two molecules"
-    )
-    f2_parser.add_argument(
-        "-ismi1",
-        "--input_smiles_1",
-        help="An input SMILES string of the first molecule",
-        dest="insmiles1",
-        required=True,
-    )
-    f2_parser.add_argument(
-        "-ismi2",
-        "--input_smiles_2",
-        help="An input SMILES string of the second molecule",
-        dest="insmiles2",
-        required=True,
-    )
-
-    args = parser.parse_args()
-    f = Fepops()
-    if args.subcmd == "get_fepops":
-        fepops_features = f.get_fepops(args.insmile)
-        print(fepops_features)
-
-    if args.subcmd == "cal_sim":
-        fepops_features_1 = f.get_fepops(args.insmiles1)
-        fepops_features_2 = f.get_fepops(args.insmiles2)
-        print(f.calc_similarity(fepops_features_1, fepops_features_2))
+    def __call__(
+        self, query: Union[np.array, str], candidate: Union[np.array, str]
+    ) -> float:
+        return self.calc_similarity(query, candidate)
