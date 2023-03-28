@@ -1,6 +1,6 @@
 """Initial framework of FEPOPS test suite"""
 
-from fepops import Fepops
+from fepops.fepops import Fepops
 
 
 def test_k_medoids_simple(fepops_1024_unclustered):
