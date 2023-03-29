@@ -429,9 +429,12 @@ class Fepops:
         List
                 A list containing mol objects of different conformers with different angles of rotetable bonds.
         """
-        mol = Chem.AddHs(mol)
-        AllChem.EmbedMolecule(mol, randomSeed=42)
-        original_conformer = mol.GetConformer(0)
+        try: 
+            mol = Chem.AddHs(mol)
+            original_conformer = mol.GetConformer(AllChem.EmbedMolecule(mol, randomSeed=42))
+        except ValueError:
+            print ("Conformer embedding failed")
+            return []
         dihedrals = self._get_dihedrals(mol)
         starting_angles = (
             rdMolTransforms.GetDihedralDeg(original_conformer, *dihedral_atoms)
@@ -588,6 +591,8 @@ class Fepops:
         for index, t_mol in enumerate(tautomers_list):
             conf_list = self.generate_conformers(t_mol)
             each_mol_with_all_confs_list.extend(conf_list)
+
+        if not len(each_mol_with_all_confs_list): return None
 
         for index, each_mol in enumerate(each_mol_with_all_confs_list):
             pharmacophore_feature = self.get_centroid_pharmacophoric_features(each_mol)
