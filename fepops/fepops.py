@@ -551,7 +551,7 @@ class Fepops:
         # print (pharmacophore_features_arr, pharmacophore_features_arr.shape)
         return pharmacophore_features_arr
 
-    def get_fepops(self, smiles_string: str, write_to_db_if_available:bool=True) -> np.array:
+    def get_fepops(self, smiles_string: str, write_to_db_if_available:bool=True) -> Union[np.array, None]:
         """Get Fepops descriptors
 
         This method returns Fepops descriptors from a smiles string.
