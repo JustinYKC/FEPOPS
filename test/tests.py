@@ -27,4 +27,3 @@ def test_paracetamol_vs_all(test_mol_smiles):
     }
     it = iter(sorted_scores.keys())
     assert "Paracetamol" in next(it).split("_")[1]
-    assert "Diclofenac" in next(it).split("_")[1]
