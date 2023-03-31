@@ -3,11 +3,13 @@ from rdkit.Chem import AllChem
 from rdkit.Chem import MolStandardize
 from rdkit.Chem import Crippen
 from rdkit.Chem import rdMolTransforms
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans as _SKLearnKMeans
+from fast_pytorch_kmeans import KMeans as _FastPTKMeans
 from sklearn.preprocessing import StandardScaler
 from scipy.spatial.distance import cdist, squareform, pdist
 import numpy as np
 from pathlib import Path
+from tqdm import tqdm
 import sqlite3
 import bz2
 import io
@@ -15,7 +17,6 @@ import io
 
 import sys, random, itertools, argparse
 import torch
-import kmeans_pytorch
 from typing import Union, Callable, Optional
 
 
@@ -47,7 +48,7 @@ class Fepops:
 
     def __init__(self, kmeans_method: str = "pytorch-cpu", database_file: Optional[Union[str, Path]] = None):
         self.database_file=database_file
-        self.implemented_kmeans_methods = ["sklearn", "pytorch-gpu", "pytorch-cpu"]
+        self.implemented_kmeans_methods = ["sklearn", "pytorch-cpu", "pytorch-gpu"]
         if kmeans_method not in self.implemented_kmeans_methods:
             raise ValueError(
                 f"Supplied argument kmeans_method '{kmeans_method}' not found, please supply a string denoting an implemented kmeans method from {self.implemented_kmeans_methods}"
@@ -253,7 +254,7 @@ class Fepops:
             The number of centoids used for clustering. By default 4.
         kmeans_method : str
             Method used to perform the kmeans calculation. Can be 'sklearn',
-            'pytorch-gpu', or 'pytorch-cpu'. By default 'kmeans-pytorch-cpu'.
+            'pytorch-cpu' or 'pytorch-gpu'. By default 'pytorch-cpu'.
 
         Returns
         -------
@@ -262,21 +263,16 @@ class Fepops:
         """
         mol_coors = mol.GetConformer(0).GetPositions()
         if kmeans_method == "sklearn":
-            kmeans = KMeans(n_clusters=num_centroids, random_state=0).fit(mol_coors)
+            kmeans = _SKLearnKMeans(n_clusters=num_centroids, random_state=42).fit(mol_coors)
             centroid_coors = kmeans.cluster_centers_
             instance_cluster_labels = kmeans.labels_
-        elif kmeans_method in ["pytorch-gpu", "pytorch-cpu"]:
-            mol_coors_torch = torch.from_numpy(mol_coors)
-            instance_cluster_labels, centroid_coors = kmeans_pytorch.kmeans(
-                X=mol_coors_torch,
-                num_clusters=num_centroids,
-                distance="euclidean",
-                device=torch.device("cuda:0")
-                if kmeans_method == "pytorch-gpu"
-                else torch.device("cpu"),
-            )
-            instance_cluster_labels = instance_cluster_labels.numpy()
-            centroid_coors = centroid_coors.numpy()
+        elif kmeans_method.startswith("pytorch"):
+            mol_coors_torch = torch.from_numpy(mol_coors).to('cuda' if kmeans_method.endswith("gpu") else "cpu")
+            kmeans=_FastPTKMeans(n_clusters=num_centroids)
+            instance_cluster_labels= kmeans.fit_predict(
+                mol_coors_torch
+            ).numpy()
+            centroid_coors = kmeans.centroids.numpy()
         else:
             raise ValueError(
                 f"The method selected for the k-means calculation is invalid, please use one of {self.implemented_kmeans_methods}"
@@ -701,7 +697,7 @@ class Fepops:
             raise (
                 "smiles should be a str or Path denoting the location of a smiles file, or a list of smiles"
             )
-        for s in smiles:
+        for s in tqdm(smiles):
             rdkit_canonical_smiles=Chem.CanonSmiles(Chem.MolToSmiles(self._mol_from_smiles(s)))
             if not self._db_fepop_exists(rdkit_canonical_smiles=rdkit_canonical_smiles):
                 f = self.get_fepops(s, write_to_db_if_available=False)
