@@ -140,7 +140,7 @@ class FepopsBenchmarker:
                 SimilarityMethod("FEPOPS", self.fepops.calc_similarity),
             ]
         )
-        scores_dict=roc_scorer.get_auroc_scores(pd.read_csv(Path(data_tsv), sep="\t", index_col=[0], names=["smiles", "active"]).head(13))
+        scores_dict=roc_scorer.get_auroc_scores(pd.read_csv(Path(data_tsv), sep="\t", index_col=[0], names=["smiles", "active"]))
         print(pd.DataFrame.from_dict(scores_dict).describe())
 
 if __name__ == "__main__":
