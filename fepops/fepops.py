@@ -238,7 +238,7 @@ class Fepops:
 
     def _perform_kmeans(
         self,
-        mol: Chem.rdchem.Mol,
+        atom_coords: np.ndarray,
         num_centroids: int = 4,
         kmeans_method: str = "pytorch-cpu",
     ) -> tuple:
@@ -261,13 +261,12 @@ class Fepops:
         tuple
             A tuple containing the centroid coordinates and the cluster labels of molecular atoms.
         """
-        mol_coors = mol.GetConformer(0).GetPositions()
         if kmeans_method == "sklearn":
-            kmeans = _SKLearnKMeans(n_clusters=num_centroids, random_state=42).fit(mol_coors)
+            kmeans = _SKLearnKMeans(n_clusters=num_centroids, random_state=42, n_init='auto').fit(atom_coords)
             centroid_coors = kmeans.cluster_centers_
             instance_cluster_labels = kmeans.labels_
         elif kmeans_method.startswith("pytorch"):
-            mol_coors_torch = torch.from_numpy(mol_coors).to('cuda' if kmeans_method.endswith("gpu") else "cpu")
+            mol_coors_torch = torch.from_numpy(atom_coords).to('cuda' if kmeans_method.endswith("gpu") else "cpu")
             kmeans=_FastPTKMeans(n_clusters=num_centroids)
             instance_cluster_labels= kmeans.fit_predict(
                 mol_coors_torch
@@ -501,7 +500,7 @@ class Fepops:
             A Numpy array containing 22 pharmacophoric features for all conformers.
         """
         centroid_coors, instance_cluster_labels = self._perform_kmeans(
-            mol, num_centroids, kmeans_method=self.kmeans_method_str
+            mol.GetConformer(0).GetPositions(), num_centroids, kmeans_method=self.kmeans_method_str
         )
         centroid_dist_arr = cdist(centroid_coors, centroid_coors)
         centroid_dist = list(
@@ -575,7 +574,7 @@ class Fepops:
                 return res.fetchone()[0].reshape(7,-1)
 
         if write_to_db_if_available and self.database_file is not None:
-            self.save_descriptors([smiles_string])
+            self.save_descriptors([smiles_string], show_progress_bar=False)
 
         mol = Chem.AddHs(mol)
 
@@ -674,7 +673,10 @@ class Fepops:
         sqlite3.register_converter("array", convert_array)
 
     def save_descriptors(
-        self, smiles: Union[str, Path, list[str]]):
+        self,
+        smiles: Union[str, Path, list[str]],
+        show_progress_bar:bool=True,
+        ):
         if self.database_file is None:
             raise RuntimeError("Instantiate fepops with a database_file argument if planning on pregenerating descriptors")
         
@@ -691,7 +693,7 @@ class Fepops:
             raise (
                 "smiles should be a str or Path denoting the location of a smiles file, or a list of smiles"
             )
-        for s in tqdm(smiles):
+        for s in tqdm(smiles, disable=~show_progress_bar):
             rdkit_canonical_smiles=Chem.CanonSmiles(Chem.MolToSmiles(self._mol_from_smiles(s)))
             if not self._db_fepop_exists(rdkit_canonical_smiles=rdkit_canonical_smiles):
                 f = self.get_fepops(s, write_to_db_if_available=False)
