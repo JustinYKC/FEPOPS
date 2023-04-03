@@ -46,7 +46,7 @@ class Fepops:
         database file not found
     """
 
-    def __init__(self, kmeans_method: str = "pytorch-cpu", database_file: Optional[Union[str, Path]] = None):
+    def __init__(self, database_file: Optional[Union[str, Path]] = None, kmeans_method: str = "pytorch-cpu"):
         self.database_file=database_file
         self.implemented_kmeans_methods = ["sklearn", "pytorch-cpu", "pytorch-gpu"]
         if kmeans_method not in self.implemented_kmeans_methods:
@@ -73,7 +73,7 @@ class Fepops:
             database_file=Path(database_file)
             if not database_file.exists():
                 print(f"Database {self.database_file} not found, a new one will be created")
-            self._register_sqlite_adaptors
+            self._register_sqlite_adaptors()
             self.con = sqlite3.connect(database_file, detect_types=sqlite3.PARSE_DECLTYPES)
             self.cur = self.con.cursor()
             res = self.cur.execute("SELECT name FROM sqlite_master")
