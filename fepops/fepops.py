@@ -572,10 +572,7 @@ class Fepops:
         if self.database_file is not None:
             if self._db_fepop_exists(canonical_smiles):
                 res = self.cur.execute(f"""SELECT fepops FROM fepops_lookup_table where cansmi="{canonical_smiles}" """)
-                fepops=res.fetchone()[0]
-                bin_io=io.BytesIO(fepops)
-                bin_io.seek(0)
-                return np.frombuffer(bin_io.read()).reshape(7,-1)
+                return res.fetchone()[0].reshape(7,-1)
 
         if write_to_db_if_available and self.database_file is not None:
             self.save_descriptors([smiles_string])
@@ -671,13 +668,10 @@ class Fepops:
             return sqlite3.Binary(bz2.compress(nparray.tobytes()))
 
         def convert_array(text):
-            out = io.BytesIO(text)
-            out.seek(0)
-            out = io.BytesIO(bz2.decompress(out.read()))
-            return np.load(out)
+            return np.frombuffer(bz2.decompress(text))
 
         sqlite3.register_adapter(np.ndarray, adapt_array)
-        sqlite3.register_converter("array", np.frombuffer)
+        sqlite3.register_converter("array", convert_array)
 
     def save_descriptors(
         self, smiles: Union[str, Path, list[str]]):
