@@ -17,8 +17,9 @@ This FEPOPS implementation requires the following packages:
 - pandas (>=1.5.0)
 - scikit-learn (>=0.20.x)
 - scipy (>=1.7.x)
-- PyTorch (>= 1.0.0)
-- kmeans-pytorch (>=0.3)
+- PyTorch (>=1.0.0)
+- fast-pytorch-kmeans (>=0.1.9)
+- tqdm (>=4.48.0)
 
 # Usage
 A quickstart example to generate the FEPOPS descriptors for a molecule directly from its SMILES as follows: In terminal:
