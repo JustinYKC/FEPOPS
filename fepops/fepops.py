@@ -8,16 +8,10 @@ from fast_pytorch_kmeans import KMeans as _FastPTKMeans
 from sklearn.preprocessing import StandardScaler
 from scipy.spatial.distance import cdist, squareform, pdist
 import numpy as np
-from pathlib import Path
-from tqdm import tqdm
 from pqdm.processes import pqdm
-from joblib import Parallel, delayed
-import sqlite3
-import bz2
-import io
-import sys, random, itertools, argparse
+import random, itertools
 import torch
-from typing import Union, Callable, Optional
+from typing import Union
 
 
 class Fepops:
@@ -32,18 +26,11 @@ class Fepops:
 		Method which should be used for kmeans calculation, can be
 		one of "sklearn", "pytorch-gpu", or "pytorch-cpu". By
 		default "pytorch-cpu".
-	database_file : Optional[Union[str, Path]], optional
-		Use a pregenerated database of fepops descriptors for faster lookups.
-		If None, then no database is used and fepops are generated when
-		requested. If the requested molecule does not exist in the database,
-		then it is generated. By default None.
 
 	Raises
 	------
 	ValueError
 		Invalid kmeans method
-	FileNotFoundError
-		database file not found
 	"""
 	implemented_kmeans_methods = ["sklearn", "pytorch-cpu", "pytorch-gpu"]
 	sort_by_features_col_index_dict = {
@@ -60,49 +47,15 @@ class Fepops:
 			"[!$(*#*)&!D1]-&!@[!$(*#*)&!D1]"
 		)
 
-	def __init__(self, database_file: Optional[Union[str, Path]] = None, kmeans_method: str = "pytorch-cpu"):
-		self.database_file = Path(database_file) if database_file is not None else None
+	def __init__(self, kmeans_method: str = "pytorch-cpu"):
 		if kmeans_method not in self.implemented_kmeans_methods:
 			raise ValueError(
 				f"Supplied argument kmeans_method '{kmeans_method}' not found, please supply a string denoting an implemented kmeans method from {self.implemented_kmeans_methods}"
 			)
 		self.kmeans_method_str = kmeans_method
 		self.tautomer_enumerator = MolStandardize.tautomer.TautomerEnumerator()
-		
-		
 		self.scaler = StandardScaler()
-		self._connect_database()
-		print(self.__dict__)
 
-	def _connect_database(self) -> None:
-		if hasattr(self, "database_file_prev"):
-			self.database_file = self.database_file_prev
-			del self.database_file_prev
-		if self.database_file is not None:
-			if not self.database_file.exists():
-				print(f"Database {self.database_file} not found, a new one will be created")
-			self._register_sqlite_adaptors()
-			self.con = sqlite3.connect(self.database_file, detect_types=sqlite3.PARSE_DECLTYPES)
-			self.cur = self.con.cursor()
-			res = self.cur.execute("SELECT name FROM sqlite_master")
-			if res.fetchone() is None:
-				print(f"Creating new table in {self.database_file}")
-				self.cur.execute(
-					"CREATE TABLE fepops_lookup_table(cansmi text primary key, fepops array)"
-				)
-	def _disconnect_database(self) -> None:
-			self._register_sqlite_adaptors()
-			if self.con is not None:
-				try:
-					self.con.close()
-				except:
-					print("Trying to disconnect database, but it was never connected")
-				finally:
-					self.con = None
-					self.cur = None
-			self.database_file_prev = self.database_file
-			self.database_file = self.database_file_prev
-				
 	@staticmethod
 	def _get_k_medoids(input_x: np.ndarray, k: int = 7) -> np.ndarray:
 		"""Select k Fopops conformers to generate the final Fepops descriptors
@@ -507,9 +460,12 @@ class Fepops:
 				*dihedral_atoms,
 				orig_torsion_angle + torsion_angle_multiplier * 90.0,
 			)
-
+	@staticmethod
 	def get_centroid_pharmacophoric_features(
-		self, mol: Chem.rdchem.Mol, num_centroids: int = 4
+		mol: Chem.rdchem.Mol,
+		kmeans_method_str:str,
+		num_centroids: int = 4,
+		
 	) -> np.ndarray:
 		"""Obtain the four centroids and their corresponding pharmacophoric features
 
@@ -529,7 +485,7 @@ class Fepops:
 			A Numpy array containing 22 pharmacophoric features for all conformers.
 		"""
 		centroid_coors, instance_cluster_labels = Fepops._perform_kmeans(
-			mol.GetConformer(0).GetPositions(), num_centroids, kmeans_method=self.kmeans_method_str
+			mol.GetConformer(0).GetPositions(), num_centroids, kmeans_method=kmeans_method_str
 		)
 		centroid_dist_arr = cdist(centroid_coors, centroid_coors)
 		centroid_dist = list(
@@ -575,7 +531,7 @@ class Fepops:
 		# print (pharmacophore_features_arr, pharmacophore_features_arr.shape)
 		return pharmacophore_features_arr
 
-	def get_fepops(self, smiles_string: str, write_to_db_if_available: bool=True) -> Union[np.ndarray, None]:
+	def get_fepops(self, mol: Union[str,Chem.rdchem.Mol]) -> Union[np.ndarray, None]:
 		"""Get Fepops descriptors
 
 		This method returns Fepops descriptors from a smiles string.
@@ -585,27 +541,14 @@ class Fepops:
 		----------
 		smiles_string : str
 			SMILES string of an input molecule.
-		write_to_db_if_available : bool
-			If True and a database is available, store the generated Fepop.
-			By default True.
 
 		Returns
 		-------
 		np.ndarray
 			A Numpy array containing the calculated Fepops descriptors of an input molecule.
 		"""
-
-		mol = Fepops._mol_from_smiles(smiles_string)
-		canonical_smiles = Chem.CanonSmiles(Chem.MolToSmiles(mol))
-		if self.database_file is not None:
-			if self._db_fepop_exists(canonical_smiles):
-				res = self.cur.execute(f"""SELECT fepops FROM fepops_lookup_table where cansmi="{canonical_smiles}" """)
-				return res.fetchone()[0].reshape(7,-1)
-			new_fepop = self._get_fepops(mol)
-			if write_to_db_if_available: self._db_write_smiles_and_fepops_to_db(canonical_smiles, new_fepop)
-		return self._get_fepops(mol)
-		
-	def _get_fepops(self, mol: Chem.rdchem.Mol):
+		if isinstance(mol, str):
+			mol = Fepops._mol_from_smiles(mol)
 		mol = Chem.AddHs(mol)
 
 		tautomers_list = self._get_tautomers(mol)
@@ -617,7 +560,7 @@ class Fepops:
 		if not len(each_mol_with_all_confs_list): return None
 
 		for index, each_mol in enumerate(each_mol_with_all_confs_list):
-			pharmacophore_feature = self.get_centroid_pharmacophoric_features(each_mol)
+			pharmacophore_feature = self.get_centroid_pharmacophoric_features(each_mol, kmeans_method_str=self.kmeans_method_str, num_centroids=4)
 			if index == 0:
 				pharmacophore_feature_all_confs = pharmacophore_feature
 				continue
@@ -682,124 +625,5 @@ class Fepops:
 		self,
 		query: Union[np.ndarray, str],
 		candidate: Union[np.ndarray, str],
-		database_file: Optional[Union[str, Path]] = None,
 	) -> float:
 		return self.calc_similarity(query, candidate)
-
-	
-	
-	def _register_sqlite_adaptors(self) -> None:
-		def adapt_array(nparray):
-			"""
-			Adapted from
-			http://stackoverflow.com/a/31312102/190597 (SoulNibbler)
-			"""
-			return sqlite3.Binary(bz2.compress(nparray.tobytes()))
-
-		def convert_array(text):
-			return np.frombuffer(bz2.decompress(text))
-
-		sqlite3.register_adapter(np.ndarray, adapt_array)
-		sqlite3.register_converter("array", convert_array)
-
-	def _get_can_smi_mol_tuple(s:str, is_canonical:bool=False):
-		mol = Fepops._mol_from_smiles(s)
-		if is_canonical:
-			return (s, mol)
-		else:
-			return (Chem.CanonSmiles(Chem.MolToSmiles(mol)), mol)
-
-
-	def save_descriptors(
-		self,
-		smiles: Union[str, Path, list[str]],
-		show_progress_bar: bool=True,
-		parallel: bool=True,
-		n_jobs:int =-1,
-		):
-		if self.database_file is None:
-			raise RuntimeError("Instantiate fepops with a database_file argument if planning on pregenerating descriptors")
-		
-		if isinstance(smiles, str):
-			smiles = Path(smiles)
-		if isinstance(smiles, Path):
-			if smiles.exists():
-				smiles = [s.strip() for s in open(smiles).readlines()]
-			else:
-				raise ValueError(
-					f"smiles file ({smiles}) not found. If you are passing smiles, make it into a list"
-				)
-		if not isinstance(smiles, list):
-			raise (
-				"smiles should be a str or Path denoting the location of a smiles file, or a list of smiles"
-			)
-		
-		smiles=list(set(smiles))
-		if not parallel:
-			# Ensure unique (canonical, also storing intermediate mol)
-			canonical_smiles_to_mol_dict = dict(Fepops._get_can_smi_mol_tuple(s) for s in tqdm(smiles, desc="Ensuring unique"))
-			# Check not already in the database
-			canonical_smiles_to_mol_dict = {cansmi:mol for cansmi, mol in canonical_smiles_to_mol_dict.items() if not self._db_fepop_exists(cansmi)}
-			for rdkit_canonical_smiles, mol in canonical_smiles_to_mol_dict.items():
-				self._db_write_smiles_and_fepops_to_db(rdkit_canonical_smiles, self._get_fepops(mol))
-		else: # Do it in parallel
-			# Ensure unique (canonical, also storing intermediate mol)
-			canonical_smiles_to_mol_dict= dict(Parallel(n_jobs=n_jobs)(delayed(Fepops._get_can_smi_mol_tuple)(s) for s in smiles))
-			# Check not already in the database
-			canonical_smiles_to_mol_dict = {cansmi:mol for cansmi, mol in canonical_smiles_to_mol_dict.items() if not self._db_fepop_exists(cansmi)}
-			# Get (cansmi,fepops) tuples
-			self._disconnect_database()
-			print (canonical_smiles_to_mol_dict)
-			cansmi_fepops_tuples = Parallel(n_jobs=n_jobs)(delayed(lambda sm: (sm[0], self._get_fepops(sm[1])))((cs,m)) for cs, m in canonical_smiles_to_mol_dict.items())
-			self._connect_database()
-
-			for rdkit_canonical_smiles, new_fepop in cansmi_fepops_tuples:
-				self._db_write_smiles_and_fepops_to_db(rdkit_canonical_smiles, new_fepop)
-			print (f"Total {len(cansmi_fepops_tuples)} new molecues found and saved in the database: {self.database_file}")
-
-		'''
-		for idx, s in enumerate((tqdm(smiles, disable=~show_progress_bar))):
-			rdkit_canonical_smiles=Chem.CanonSmiles(Chem.MolToSmiles(self._mol_from_smiles(s)))
-			if not self._db_fepop_exists(rdkit_canonical_smiles=rdkit_canonical_smiles):
-				print (idx)
-				f = self.get_fepops(s, write_to_db_if_available=False)
-				self._db_write_smiles_and_fepops_to_db(rdkit_canonical_smiles, f)
-		'''
-
-	def _db_write_smiles_and_fepops_to_db(self, rdkit_canonical_smiles:str, fepops:np.ndarray):
-		if not self._db_fepop_exists(rdkit_canonical_smiles=rdkit_canonical_smiles):
-			self.cur.execute(
-				"insert into fepops_lookup_table (cansmi, fepops) values (?,?)",
-				(rdkit_canonical_smiles, fepops),
-			)
-			self.con.commit()
-	def _db_fepop_exists(self, rdkit_canonical_smiles:str):
-		"""Check if Fepop exists in the database
-
-		If the fepops object was constructed with a database file, then
-		query if the supplied canonical SMILES is included.  If no database
-		is present, then False is returned, as if it is not included.
-
-		Parameters
-		----------
-		rdkit_canonical_smiles : _type_
-			_description_
-
-		Returns
-		-------
-		_type_
-			_description_
-		"""        
-		if self.database_file is None:
-			return False
-		res = self.cur.execute(
-			f"""SELECT EXISTS(SELECT 1 FROM fepops_lookup_table WHERE cansmi="{rdkit_canonical_smiles}" LIMIT 1);"""
-			)
-		found = res.fetchone()
-		if found[0] != 1:
-			return False
-		return True
-
-	# def __del__(self):
-	# 	if self.database_file is not None:
-	# 		self.con.close()
