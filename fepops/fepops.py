@@ -8,8 +8,7 @@ from fast_pytorch_kmeans import KMeans as _FastPTKMeans
 from sklearn.preprocessing import StandardScaler
 from scipy.spatial.distance import cdist, squareform, pdist
 import numpy as np
-from pqdm.processes import pqdm
-import random, itertools
+import itertools
 import torch
 from typing import Union
 
@@ -19,7 +18,7 @@ class Fepops:
 
 	Fepops allows the comparison of molecules using feature points, see
 	the original publication for more information. https://pubs.acs.org/doi/10.1021/jm049654z
-	
+
 	Parameters
 	----------
 	kmeans_method : str, optional
@@ -47,7 +46,7 @@ class Fepops:
 			"[!$(*#*)&!D1]-&!@[!$(*#*)&!D1]"
 		)
 
-	def __init__(self, kmeans_method: str = "pytorch-cpu"):
+	def __init__(self, kmeans_method: str = "pytorch-cpu", seed=42):
 		if kmeans_method not in self.implemented_kmeans_methods:
 			raise ValueError(
 				f"Supplied argument kmeans_method '{kmeans_method}' not found, please supply a string denoting an implemented kmeans method from {self.implemented_kmeans_methods}"
@@ -57,7 +56,7 @@ class Fepops:
 		self.scaler = StandardScaler()
 
 	@staticmethod
-	def _get_k_medoids(input_x: np.ndarray, k: int = 7) -> np.ndarray:
+	def _get_k_medoids(input_x: np.ndarray, k: int = 7, seed:int=42) -> np.ndarray:
 		"""Select k Fopops conformers to generate the final Fepops descriptors
 
 		A private method used to perform k-medoids in order to derive the final Fepops descriptors
@@ -83,10 +82,10 @@ class Fepops:
 		point_to_centroid_map = np.ones(input_x.shape[0])
 		point_to_centroid_map_prev = np.zeros_like(point_to_centroid_map)
 
+		np_rng=np.random.default_rng(seed=seed)
 		medoids = input_x[
-			np.random.choice(np.arange(input_x.shape[0]), size=k, replace=False), :
+			np_rng.choice(np.arange(input_x.shape[0]), size=k, replace=False), :
 		]
-		# medoids = input_x[np.argsort(np.sum(distances, axis=0))[np.round(np.linspace(0, len(input_x.shape[0]) - 1, k)).astype(int)]]
 
 		while (point_to_centroid_map != point_to_centroid_map_prev).any():
 			point_to_centroid_map_prev = point_to_centroid_map
@@ -96,7 +95,7 @@ class Fepops:
 			for i in range(k):
 				medoid_members = input_x[point_to_centroid_map == i]
 				if len(medoid_members) == 0:
-					chosen_x_point = np.random.choice(np.arange(input_x.shape[0]))
+					chosen_x_point = np_rng.choice(np.arange(input_x.shape[0]))
 					medoids[i] = input_x[chosen_x_point, :]
 					point_to_centroid_map[chosen_x_point] = i
 				medoids[i] = np.median(
@@ -218,6 +217,7 @@ class Fepops:
 		atom_coords: np.ndarray,
 		num_centroids: int = 4,
 		kmeans_method: str = "pytorch-cpu",
+		seed:int=42,
 	) -> tuple:
 		"""Perform kmeans calculation
 
@@ -361,7 +361,7 @@ class Fepops:
 		return bound_to_atom_1, bound_to_atom_2
 
 	@staticmethod
-	def _sample_bond_states(n_rot: int) -> list:
+	def _sample_bond_states(n_rot: int, seed:int=42) -> list:
 		"""Sample a set of conformers with different rotation angles
 
 		A private method used to generate a set of bond angle multipliers (0 to 3) using
@@ -381,13 +381,15 @@ class Fepops:
 		if n_rot <= 5:
 			return list(itertools.product(range(4), repeat=n_rot))
 
+		np_rng=np.random.default_rng(seed=seed)
+
 		rotation_list = set(
-			tuple(random.choice(range(4)) for _ in range(n_rot))
+			tuple(np_rng.choice(range(4), size=n_rot))
 			for counter in range(1024)
 		)
+
 		while len(rotation_list) < 1024:
-			rots = [random.choice(range(4)) for _ in range(n_rot)]
-			rotation_list.add(tuple(rots))
+			rotation_list.add(tuple(np_rng.choice(range(4),n_rot)))
 		return list(rotation_list)
 
 	@staticmethod
@@ -407,7 +409,7 @@ class Fepops:
 		List
 				A list containing mol objects of different conformers with different angles of rotetable bonds.
 		"""
-		try: 
+		try:
 			mol = Chem.AddHs(mol)
 			original_conformer = mol.GetConformer(AllChem.EmbedMolecule(mol, randomSeed=42))
 		except ValueError:
@@ -465,7 +467,7 @@ class Fepops:
 		mol: Chem.rdchem.Mol,
 		kmeans_method_str:str,
 		num_centroids: int = 4,
-		
+
 	) -> np.ndarray:
 		"""Obtain the four centroids and their corresponding pharmacophoric features
 
@@ -609,7 +611,7 @@ class Fepops:
 			A Numpy array containing the FEPOPS descriptors of the candidate
 			molecule or a smiles string from which to generate FEPOPS descriptors
 			for the query molecule.
-		
+
 		Returns
 		-------
 		float

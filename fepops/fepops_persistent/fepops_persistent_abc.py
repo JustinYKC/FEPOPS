@@ -10,7 +10,6 @@ from scipy.spatial.distance import cdist, squareform, pdist
 import numpy as np
 from pathlib import Path
 from tqdm import tqdm
-from pqdm.processes import pqdm
 from joblib import Parallel, delayed
 import io
 from ..fepops import Fepops
