@@ -46,7 +46,7 @@ class Fepops:
 			"[!$(*#*)&!D1]-&!@[!$(*#*)&!D1]"
 		)
 
-	def __init__(self, kmeans_method: str = "pytorch-cpu", seed=42):
+	def __init__(self, kmeans_method: str = "pytorch-cpu"):
 		if kmeans_method not in self.implemented_kmeans_methods:
 			raise ValueError(
 				f"Supplied argument kmeans_method '{kmeans_method}' not found, please supply a string denoting an implemented kmeans method from {self.implemented_kmeans_methods}"
@@ -232,6 +232,8 @@ class Fepops:
 		kmeans_method : str
 			Method used to perform the kmeans calculation. Can be 'sklearn',
 			'pytorch-cpu' or 'pytorch-gpu'. By default 'pytorch-cpu'.
+		seed : int
+			Seed for sklearn kmeans initialisation. By default 42.
 
 		Returns
 		-------
@@ -239,7 +241,7 @@ class Fepops:
 			A tuple containing the centroid coordinates and the cluster labels of molecular atoms.
 		"""
 		if kmeans_method == "sklearn":
-			kmeans = _SKLearnKMeans(n_clusters=num_centroids, random_state=42, n_init='auto').fit(atom_coords)
+			kmeans = _SKLearnKMeans(n_clusters=num_centroids, random_state=seed, n_init='auto').fit(atom_coords)
 			centroid_coors = kmeans.cluster_centers_
 			instance_cluster_labels = kmeans.labels_
 		elif kmeans_method.startswith("pytorch"):
@@ -412,7 +414,7 @@ class Fepops:
 		"""
 		try:
 			mol = Chem.AddHs(mol)
-			original_conformer = mol.GetConformer(AllChem.EmbedMolecule(mol, randomSeed=42))
+			original_conformer = mol.GetConformer(AllChem.EmbedMolecule(mol, randomSeed=random_seed))
 		except ValueError:
 			print ("Conformer embedding failed")
 			return []
