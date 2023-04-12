@@ -430,7 +430,7 @@ class Fepops:
 			Fepops._generate_conf(
 				original_conformer, dihedrals, starting_angles, bond_state
 			)
-			new_conf_mol_list.append(mol)
+			new_conf_mol_list.append(Chem.Mol(mol))
 
 		return new_conf_mol_list
 
