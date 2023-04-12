@@ -246,9 +246,9 @@ class Fepops:
 			instance_cluster_labels = kmeans.labels_
 		elif kmeans_method.startswith("pytorch"):
 			mol_coors_torch = torch.from_numpy(atom_coords).to('cuda' if kmeans_method.endswith("gpu") else "cpu")
-			kmeans = _FastPTKMeans(n_clusters=num_centroids)
+			kmeans = _FastPTKMeans(n_clusters=num_centroids, max_iter=300)
 			instance_cluster_labels = kmeans.fit_predict(
-				mol_coors_torch
+				mol_coors_torch, centroids=torch.tensor(atom_coords[:num_centroids], device=mol_coors_torch.device)
 			).numpy()
 			centroid_coors = kmeans.centroids.numpy()
 		else:
@@ -423,7 +423,7 @@ class Fepops:
 			rdMolTransforms.GetDihedralDeg(original_conformer, *dihedral_atoms)
 			for dihedral_atoms in dihedrals
 		]
-		bond_states = Fepops._sample_bond_states(len(dihedrals),hash(str(mol.GetConformer(0).GetPositions())))
+		bond_states = Fepops._sample_bond_states(len(dihedrals),abs(hash(str(mol.GetConformer(0).GetPositions()))))
 
 		new_conf_mol_list = []
 		for bond_state in bond_states:
