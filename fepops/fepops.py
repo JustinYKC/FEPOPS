@@ -361,7 +361,7 @@ class Fepops:
 		return bound_to_atom_1, bound_to_atom_2
 
 	@staticmethod
-	def _sample_bond_states(n_rot: int, seed:int=42) -> list:
+	def _sample_bond_states(n_rot: int, seed:int) -> list:
 		"""Sample a set of conformers with different rotation angles
 
 		A private method used to generate a set of bond angle multipliers (0 to 3) using
@@ -372,7 +372,8 @@ class Fepops:
 		----------
 		n_nor : int
 			The number of rotatable bonds in a molecule.
-
+		seed : int
+			Seed for random sampling of rotamer space. Typically the hash of molecule coords.
 		Returns
 		-------
 		List
@@ -416,11 +417,11 @@ class Fepops:
 			print ("Conformer embedding failed")
 			return []
 		dihedrals = Fepops._get_dihedrals(mol)
-		starting_angles = (
+		starting_angles = [
 			rdMolTransforms.GetDihedralDeg(original_conformer, *dihedral_atoms)
 			for dihedral_atoms in dihedrals
-		)
-		bond_states = Fepops._sample_bond_states(len(dihedrals))
+		]
+		bond_states = Fepops._sample_bond_states(len(dihedrals),hash(str(mol.GetConformer(0).GetPositions())))
 
 		new_conf_mol_list = []
 		for bond_state in bond_states:
@@ -428,6 +429,7 @@ class Fepops:
 				original_conformer, dihedrals, starting_angles, bond_state
 			)
 			new_conf_mol_list.append(mol)
+
 		return new_conf_mol_list
 
 	@staticmethod
