@@ -65,14 +65,15 @@ class FepopsDBSqlite(FepopsPersistentAbstractBaseClass):
 
 		Parameters
 		----------
-		rdkit_canonical_smiles : _type_
-						_description_
+		rdkit_canonical_smiles : str
+			Canonical smiles to check
 
 		Returns
 		-------
-		_type_
-						_description_
+		bool
+			True if supplied canonical smiles exists in the database
 		"""
+  
 		if self.database_file is None:
 			return False
 		res = self.cur.execute(

@@ -145,17 +145,17 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
 		Parameters
 		----------
 		smiles_string : str
-						Smiles string
+			Smiles string
 
 		Returns
 		-------
 		Chem.rdchem.Mol
-						RDkit molecule
+			RDkit molecule
 
 		Raises
 		------
 		ValueError
-						Unable to parse smiles into a molecule
+			Unable to parse smiles into a molecule
 		"""
 		if not isinstance(smiles_string, str):
 			raise ValueError(

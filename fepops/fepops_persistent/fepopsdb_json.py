@@ -50,7 +50,7 @@ class FepopsDBJSON(FepopsPersistentAbstractBaseClass):
 			self.add_fepop(rdkit_canonical_smiles=smiles, fepops=new_fepops)
 			return new_fepops
 		
-	def fepop_exists(self, rdkit_canonical_smiles: str):
+	def fepop_exists(self, rdkit_canonical_smiles: str)->bool:
 		"""Check if Fepop exists in the database
 
 		If the fepops object was constructed with a database file, then
@@ -59,13 +59,13 @@ class FepopsDBJSON(FepopsPersistentAbstractBaseClass):
 
 		Parameters
 		----------
-		rdkit_canonical_smiles : _type_
-						_description_
+		rdkit_canonical_smiles : str
+			Canonical smiles to check
 
 		Returns
 		-------
-		_type_
-						_description_
+		bool
+			True if the canonical smiles exists in the database
 		"""
 		return rdkit_canonical_smiles in self.db
 	
