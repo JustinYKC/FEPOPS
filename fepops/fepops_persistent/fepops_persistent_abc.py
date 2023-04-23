@@ -176,7 +176,17 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
 
 	@staticmethod
 	def _get_can_smi_mol_tuple(s: str, is_canonical: bool = False):
-		mol = Fepops._mol_from_smiles(s)
+		try:
+			mol = Chem.MolFromSmiles(s)
+		except:
+			try:
+				mol = Chem.MolFromSmiles(s, sanitize=False)
+			finally:
+				mol = None
+		if mol is None:
+			raise ValueError(
+				f"Could not parse smiles to a valid molecule, smiles was:{s}"
+			)
 		if is_canonical:
 			return (s, mol)
 		else:
