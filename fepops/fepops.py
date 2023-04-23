@@ -17,7 +17,9 @@ class Fepops:
 	"""Fepops molecular similarity object
 
 	Fepops allows the comparison of molecules using feature points, see
-	the original publication for more information. https://pubs.acs.org/doi/10.1021/jm049654z
+	the original publication for more information https://pubs.acs.org/doi/10.1021/jm049654z
+	In short, featurepoints reduce the number of points used to represent a molecule and can
+	be used to compare molecules in the hope of discovering biosimilars based on queries.
 
 	Parameters
 	----------
