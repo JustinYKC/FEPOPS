@@ -10,7 +10,7 @@ from scipy.spatial.distance import cdist, squareform, pdist
 import numpy as np
 import itertools
 import torch
-from typing import Union
+from typing import Union, Optional
 
 
 class Fepops:
@@ -34,7 +34,12 @@ class Fepops:
 		Invalid kmeans method
 	"""
 
-	def __init__(self, kmeans_method: str = "pytorch-cpu"):
+	def __init__(
+			self,
+			kmeans_method: str = "pytorch-cpu",
+			max_tautomers:Optional[int]=None,
+			):
+
 		self.implemented_kmeans_methods = ["sklearn", "pytorch-cpu", "pytorch-gpu"]
 		self.sort_by_features_col_index_dict = {
 			"charge": 0,
@@ -54,7 +59,7 @@ class Fepops:
 				f"Supplied argument kmeans_method '{kmeans_method}' not found, please supply a string denoting an implemented kmeans method from {self.implemented_kmeans_methods}"
 			)
 		self.kmeans_method_str = kmeans_method
-		self.tautomer_enumerator = MolStandardize.tautomer.TautomerEnumerator()
+		self.tautomer_enumerator = MolStandardize.tautomer.TautomerEnumerator(**{'max_tautomers':max_tautomers} if max_tautomers is not None else {})
 		self.scaler = StandardScaler()
 
 	def _get_k_medoids(
@@ -111,23 +116,6 @@ class Fepops:
 		for i, atom in enumerate(mol.GetAtoms()):
 			# For each atom, set the property "molAtomMapNumber" to a custom number, let's say, the index of the atom in the molecule
 			atom.SetProp("molAtomMapNumber", str(atom.GetIdx()))
-
-	def _get_tautomers(self, mol: Chem.rdchem.Mol) -> list:
-		"""Enumerate all tautomers for an input molecule
-
-		A private function used for generating all tautomers for a molecule.
-
-		Parameters
-		----------
-		mol : Chem.rdchem.Mol
-			The Rdkit mol object of the input molecule.
-
-		Returns
-		-------
-		List
-			List containing enumerated tautomers.
-		"""
-		return self.tautomer_enumerator.enumerate(mol)
 
 	def _calculate_atomic_logPs(self, mol: Chem.rdchem.Mol) -> dict:
 		"""Calculate logP contribution for each of atom in a molecule
@@ -306,8 +294,8 @@ class Fepops:
 		except:
 			try:
 				mol = Chem.MolFromSmiles(smiles_string, sanitize=False)
-			finally:
-				mol = None
+			except:
+				pass
 		if mol is None:
 			raise ValueError(
 				f"Could not parse smiles to a valid molecule, smiles was:{smiles_string}"
@@ -493,14 +481,10 @@ class Fepops:
 		np.ndarray
 			A Numpy array containing 22 pharmacophoric features for all conformers.
 		"""
-		centroid_coors, instance_cluster_labels = self._perform_kmeans(
+		centroid_coords, instance_cluster_labels = self._perform_kmeans(
 			mol.GetConformer(0).GetPositions(),
 			num_centroids,
 			kmeans_method=kmeans_method_str,
-		)
-		centroid_dist_arr = cdist(centroid_coors, centroid_coors)
-		centroid_dist = list(
-			centroid_dist_arr[np.triu_indices_from(centroid_dist_arr, k=1)]
 		)
 
 		atomic_logP_dict = self._calculate_atomic_logPs(mol)
@@ -511,35 +495,38 @@ class Fepops:
 		hb_donors = set(
 			i[0] for i in mol.GetSubstructMatches(self.donor_mol_from_smarts)
 		)
-
-		pharmacophore_features_arr = np.empty(shape=[0, 4])
+		pharmacophore_features_arr = np.empty(shape=[num_centroids, 4])
 		for centroid in range(num_centroids):
-			hba, hbd = 0.0, 0.0
 			centroid_atomic_id = np.where(instance_cluster_labels == centroid)[0]
+
 			sum_of_logP = self._sum_of_atomic_features_by_centroids(
 				atomic_logP_dict, centroid_atomic_id
 			)
 			sum_of_charge = self._sum_of_atomic_features_by_centroids(
 				atomic_charge_dict, centroid_atomic_id
 			)
-			if len(hb_acceptors.intersection(set(centroid_atomic_id))) > 0:
-				hba = 1
-			if len(hb_donors.intersection(set(centroid_atomic_id))) > 0:
-				hbd = 1
-			pharmacophore_features_arr = np.vstack(
-				(pharmacophore_features_arr, [sum_of_charge, sum_of_logP, hbd, hba])
-			)
+			
+			if any(atom_id in hb_acceptors for atom_id in centroid_atomic_id ):
+				hba=1
+			else:
+				hba=0
+			if any(atom_id in hb_donors for atom_id in centroid_atomic_id ):
+				hbd=1
+			else:
+				hbd=0
+
+			pharmacophore_features_arr[centroid,:] = sum_of_charge, sum_of_logP, hbd, hba
+			
 		sorted_index_rank_arr = self._sort_kmeans_centroid(
 			pharmacophore_features_arr, "charge"
 		)
-		centroid_coors = centroid_coors[sorted_index_rank_arr]
+		centroid_coords = centroid_coords[sorted_index_rank_arr]
 		pharmacophore_features_arr = pharmacophore_features_arr[sorted_index_rank_arr]
-		centroid_dist_arr = cdist(centroid_coors, centroid_coors)
+		centroid_dist_arr = cdist(centroid_coords, centroid_coords)
 		centroid_dist = self._get_centroid_dist(centroid_dist_arr)
 		pharmacophore_features_arr = np.append(
 			pharmacophore_features_arr, centroid_dist
 		)
-		# print (pharmacophore_features_arr, pharmacophore_features_arr.shape)
 		return pharmacophore_features_arr
 
 	def get_fepops(self, mol: Union[str, Chem.rdchem.Mol]) -> Union[np.ndarray, None]:
@@ -560,27 +547,27 @@ class Fepops:
 		"""
 		if isinstance(mol, str):
 			mol = self._mol_from_smiles(mol)
+		if mol is None:
+			return None
+		
 		mol = Chem.AddHs(mol)
-
-		tautomers_list = self._get_tautomers(mol)
+		tautomers_list = self.tautomer_enumerator.enumerate(mol)
 		each_mol_with_all_confs_list = []
 		for index, t_mol in enumerate(tautomers_list):
 			conf_list = self.generate_conformers(t_mol)
 			each_mol_with_all_confs_list.extend(conf_list)
 
-		if not len(each_mol_with_all_confs_list):
+		if each_mol_with_all_confs_list==[]:
 			return None
 
-		for index, each_mol in enumerate(each_mol_with_all_confs_list):
-			pharmacophore_feature = self.get_centroid_pharmacophoric_features(
-				each_mol, kmeans_method_str=self.kmeans_method_str, num_centroids=4
+		pharmacophore_feature_all_confs=np.array(
+			[self.get_centroid_pharmacophoric_features(each_mol,
+					      kmeans_method_str=self.kmeans_method_str,
+						   num_centroids=4
 			)
-			if index == 0:
-				pharmacophore_feature_all_confs = pharmacophore_feature
-				continue
-			pharmacophore_feature_all_confs = np.vstack(
-				(pharmacophore_feature_all_confs, pharmacophore_feature)
-			)
+			for each_mol in each_mol_with_all_confs_list]
+		)
+
 		return self._get_k_medoids(pharmacophore_feature_all_confs, 7)
 
 	def _score(self, x1: np.ndarray, x2: np.ndarray) -> float:
