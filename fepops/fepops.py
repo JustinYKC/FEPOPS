@@ -38,8 +38,13 @@ class Fepops:
 			self,
 			kmeans_method: str = "pytorch-cpu",
 			max_tautomers:Optional[int]=None,
+			*,
+			num_fepops_per_mol:int=7,
+			num_centroids_per_fepop:int=4,
 			):
 
+		self.num_fepops_per_mol=num_fepops_per_mol
+		self.num_centroids_per_fepop=num_centroids_per_fepop
 		self.implemented_kmeans_methods = ["sklearn", "pytorch-cpu", "pytorch-gpu"]
 		self.sort_by_features_col_index_dict = {
 			"charge": 0,
@@ -257,19 +262,31 @@ class Fepops:
 		sort_index = self.sort_by_features_col_index_dict[sort_by_features]
 		return pharmacophore_features_arr[:, sort_index].argsort()
 
-	def _get_centroid_dist(self, centroid_dist_arr: np.ndarray) -> list:
-		centroid_dist = []
-		arr_row, arr_col = centroid_dist_arr.shape[0], centroid_dist_arr.shape[1]
-		for row in range(arr_row):
-			i, j = row, 0
-			while i < arr_row and j < arr_col and centroid_dist_arr[i][j] != 0:
-				if i == arr_row - 1 and j == 0:
-					centroid_dist.insert(0, centroid_dist_arr[i][j])
-				else:
-					centroid_dist.append(centroid_dist_arr[i][j])
-				i += 1
-				j += 1
-		return centroid_dist
+	def _get_centroid_distances(self, centroid_coords: np.ndarray) -> np.ndarray:
+		"""Get centroid distances array
+
+		In the fepops paper using 4 centroids, there is a specific order in
+		which to return the 4 distances:
+		d1-4, d1-2, d2-3, d3-4, d1-3, d2-4.
+		This order is the same as the way matrix determinants are calculated,
+		and as such this function generalises to other cardinalities of points.
+		
+
+		Parameters
+		----------
+		centroid_coords : np.ndarray
+			MxN array of centroid coords, where M is the number of centroids,
+			and N is the number of coordinates (should be 3).
+
+		Returns
+		-------
+		np.ndarray
+			Ordered centroid distances
+		"""
+		
+		distance_matrix=squareform(pdist(centroid_coords))
+		distances = np.array([distance_matrix[0,distance_matrix.shape[0]-1]]+[ele for arr in [distance_matrix.diagonal(i) for i in range(1,distance_matrix.shape[0]-1)] for ele in arr])
+		return distances
 
 	def _mol_from_smiles(self, smiles_string: str) -> Chem.rdchem.Mol:
 		"""Parse smiles to mol, catching errors
@@ -462,7 +479,6 @@ class Fepops:
 		self,
 		mol: Chem.rdchem.Mol,
 		kmeans_method_str: str,
-		num_centroids: int = 4,
 	) -> np.ndarray:
 		"""Obtain the four centroids and their corresponding pharmacophoric features
 
@@ -483,7 +499,7 @@ class Fepops:
 		"""
 		centroid_coords, instance_cluster_labels = self._perform_kmeans(
 			mol.GetConformer(0).GetPositions(),
-			num_centroids,
+			num_centroids=self.num_centroids_per_fepop,
 			kmeans_method=kmeans_method_str,
 		)
 
@@ -495,8 +511,8 @@ class Fepops:
 		hb_donors = set(
 			i[0] for i in mol.GetSubstructMatches(self.donor_mol_from_smarts)
 		)
-		pharmacophore_features_arr = np.empty(shape=[num_centroids, 4])
-		for centroid in range(num_centroids):
+		pharmacophore_features_arr = np.empty(shape=[self.num_centroids_per_fepop, 4])
+		for centroid in range(self.num_centroids_per_fepop):
 			centroid_atomic_id = np.where(instance_cluster_labels == centroid)[0]
 
 			sum_of_logP = self._sum_of_atomic_features_by_centroids(
@@ -522,8 +538,7 @@ class Fepops:
 		)
 		centroid_coords = centroid_coords[sorted_index_rank_arr]
 		pharmacophore_features_arr = pharmacophore_features_arr[sorted_index_rank_arr]
-		centroid_dist_arr = cdist(centroid_coords, centroid_coords)
-		centroid_dist = self._get_centroid_dist(centroid_dist_arr)
+		centroid_dist = self._get_centroid_distances(centroid_coords)
 		pharmacophore_features_arr = np.append(
 			pharmacophore_features_arr, centroid_dist
 		)
@@ -563,12 +578,11 @@ class Fepops:
 		pharmacophore_feature_all_confs=np.array(
 			[self.get_centroid_pharmacophoric_features(each_mol,
 					      kmeans_method_str=self.kmeans_method_str,
-						   num_centroids=4
 			)
 			for each_mol in each_mol_with_all_confs_list]
 		)
 
-		return self._get_k_medoids(pharmacophore_feature_all_confs, 7)
+		return self._get_k_medoids(pharmacophore_feature_all_confs, self.num_fepops_per_mol)
 
 	def _score(self, x1: np.ndarray, x2: np.ndarray) -> float:
 		"""Score function for the similarity calculation
