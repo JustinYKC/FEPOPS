@@ -7,6 +7,7 @@ from sklearn.cluster import KMeans as _SKLearnKMeans
 from fast_pytorch_kmeans import KMeans as _FastPTKMeans
 from sklearn.preprocessing import StandardScaler
 from scipy.spatial.distance import cdist, squareform, pdist
+from scipy.special import softmax
 import numpy as np
 import itertools
 import torch
@@ -262,7 +263,7 @@ class Fepops:
 		sort_index = self.sort_by_features_col_index_dict[sort_by_features]
 		return pharmacophore_features_arr[:, sort_index].argsort()
 
-	def _get_centroid_distances(self, centroid_coords: np.ndarray) -> np.ndarray:
+	def _get_centroid_distances(self, centroid_coords_or_distmat: np.ndarray, is_distance_matrix:bool) -> np.ndarray:
 		"""Get centroid distances array
 
 		In the fepops paper using 4 centroids, there is a specific order in
@@ -270,7 +271,7 @@ class Fepops:
 		d1-4, d1-2, d2-3, d3-4, d1-3, d2-4.
 		This order is the same as the way matrix determinants are calculated,
 		and as such this function generalises to other cardinalities of points.
-		
+
 
 		Parameters
 		----------
@@ -283,8 +284,11 @@ class Fepops:
 		np.ndarray
 			Ordered centroid distances
 		"""
-		
-		distance_matrix=squareform(pdist(centroid_coords))
+
+		if is_distance_matrix:
+			distance_matrix=centroid_coords_or_distmat
+		else:
+			distance_matrix=squareform(pdist(centroid_coords_or_distmat))
 		distances = np.array([distance_matrix[0,distance_matrix.shape[0]-1]]+[ele for arr in [distance_matrix.diagonal(i) for i in range(1,distance_matrix.shape[0]-1)] for ele in arr])
 		return distances
 
@@ -521,7 +525,7 @@ class Fepops:
 			sum_of_charge = self._sum_of_atomic_features_by_centroids(
 				atomic_charge_dict, centroid_atomic_id
 			)
-			
+
 			if any(atom_id in hb_acceptors for atom_id in centroid_atomic_id ):
 				hba=1
 			else:
@@ -532,13 +536,13 @@ class Fepops:
 				hbd=0
 
 			pharmacophore_features_arr[centroid,:] = sum_of_charge, sum_of_logP, hbd, hba
-			
+
 		sorted_index_rank_arr = self._sort_kmeans_centroid(
 			pharmacophore_features_arr, "charge"
 		)
 		centroid_coords = centroid_coords[sorted_index_rank_arr]
 		pharmacophore_features_arr = pharmacophore_features_arr[sorted_index_rank_arr]
-		centroid_dist = self._get_centroid_distances(centroid_coords)
+		centroid_dist = self._get_centroid_distances(centroid_coords, is_distance_matrix=False)
 		pharmacophore_features_arr = np.append(
 			pharmacophore_features_arr, centroid_dist
 		)
@@ -564,7 +568,7 @@ class Fepops:
 			mol = self._mol_from_smiles(mol)
 		if mol is None:
 			return None
-		
+
 		mol = Chem.AddHs(mol)
 		tautomers_list = self.tautomer_enumerator.enumerate(mol)
 		each_mol_with_all_confs_list = []
@@ -584,26 +588,66 @@ class Fepops:
 
 		return self._get_k_medoids(pharmacophore_feature_all_confs, self.num_fepops_per_mol)
 
-	def _score(self, x1: np.ndarray, x2: np.ndarray) -> float:
-		"""Score function for the similarity calculation
 
-		The score function for the similarity calculation on the FEPOPS descriptors.
+	def _score_combialign(self, x1:np.ndarray, x2:np.ndarray):
+		"""Score fepops using CombiAlign
+
+		Instead of sorting feature points by charge, this algorithm matches 2
+		sets of medoids by holding one set constant and enumerating all
+		permutations of the other, and performing pearson correlation calculations
+		in a row-pairwise manner.  The highest summed correlation score permutation
+		is then used for the second set, and scoring proceeds using softmax of the
+		full fepops descriptors and the pearson correlation coefficient between
+		them.
+
+		The CombiAlign algorithm as defined in Nettles, James H., et al. "Flexible
+		3D pharmacophores as descriptors of dynamic biological space." Journal of
+		Molecular Graphics and Modelling 26.3 (2007): 622-633.
 
 		Parameters
 		----------
 		x1 : np.ndarray
-			A Numpy array containing the FEPOPS descriptors 1.
+			Query fepop
 		x2 : np.ndarray
-			A Numpy array containing the FEPOPS descriptors 2.
+			Candidate fepop
 
 		Returns
 		-------
 		float
-			The FEPOPS similarity score (Pearson correlation).
-		"""
-		x1 = self.scaler.fit_transform(x1.reshape(-1, 1))
-		x2 = self.scaler.fit_transform(x2.reshape(-1, 1))
-		return np.corrcoef(x1.flatten(), x2.flatten())[0, 1]
+			Fepops score, higher is better. 1 is the maximum.
+		"""		
+		n_distances=((self.num_centroids_per_fepop**2)-self.num_centroids_per_fepop)//2
+		x1_desc = x1[:-n_distances].reshape(self.num_centroids_per_fepop,-1)
+		x2_desc, x2_dists = x2[:-n_distances].reshape(self.num_centroids_per_fepop,-1), x2[-n_distances:]
+
+
+		permutation_tuples=list(itertools.permutations(range(self.num_centroids_per_fepop)))
+		# Find permutation which gives highest sum of correlations to x1 descriptor
+		best_permutaion=permutation_tuples[np.argmax([cdist(x1_desc, x2_desc[perm_tuple, :], metric=lambda x,y: np.corrcoef(x,y)[0,1]).diagonal().sum() for perm_tuple in permutation_tuples])]
+
+		# Rebuild x2 distances to squareform matrix, then reorder as per the best permutation and extract in required FEPOPS order.
+		dmat=np.zeros((self.num_centroids_per_fepop, self.num_centroids_per_fepop))
+		dmat[0,-1]=x2_dists[0]
+		dmat[-1,0]=x2_dists[0]
+		rows, cols = np.diag_indices_from(dmat)
+		for (r, c), v in zip([(x,y) for d in [np.stack((rows[:-i], cols[i:]), axis=1) for i in range(1, dmat.shape[0]-1)] for x,y in d], x2_dists):
+			dmat[r,c]=v
+			dmat[c,r]=v
+
+		# Reorder the distance matrix using best permutation
+		new_dmat=np.zeros_like(dmat)
+		for i, p in enumerate(best_permutaion):
+			for j in range(dmat.shape[0]):
+				if i==j:continue
+				new_dmat[i,j]=dmat[p,best_permutaion[j]]
+		
+		distances=self._get_centroid_distances(new_dmat, is_distance_matrix=True)
+		
+		# Reform x2 with reordered medoids and medoid distances
+		x2=np.hstack([x2_desc[[best_permutaion]].flatten(),distances])
+		
+		# Apply softmax and return pearson correlation between the two
+		return np.corrcoef(softmax(x1), softmax(x2))[0,1]
 
 	def calc_similarity(
 		self,
@@ -616,11 +660,11 @@ class Fepops:
 
 		Parameters
 		----------
-		fepops_features_1 : Union[np.ndarray, str]
+		query : Union[np.ndarray, str]
 			A Numpy array containing the FEPOPS descriptors of the query molecule
 			or a smiles string from which to generate FEPOPS descriptors for the
 			query molecule.
-		fepops_features_2 : Union[np.ndarray, str]
+		candidate : Union[np.ndarray, str]
 			A Numpy array containing the FEPOPS descriptors of the candidate
 			molecule or a smiles string from which to generate FEPOPS descriptors
 			for the query molecule.
@@ -634,7 +678,7 @@ class Fepops:
 			query = self.get_fepops(query)
 		if isinstance(candidate, str):
 			candidate = self.get_fepops(candidate)
-		return np.max(cdist(query, candidate, metric=self._score))
+		return np.max(cdist(query, candidate, metric=self._score_combialign))
 
 	def __call__(
 		self,
