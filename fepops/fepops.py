@@ -115,8 +115,8 @@ class Fepops:
 				medoids[i] = np.median(
 					input_x[point_to_centroid_map == i], axis=0
 				)  # Using median to ensure the minimum distance to its medoid_members to be returned
-		# Return medoids sorted by final distance, second to last, then 3rd last etc.
-		return medoids[np.lexsort(medoids.T)][::-1]
+		# Return medoids sorted by the first column (charge), second to last, then 3rd first etc.
+		return medoids[np.lexsort(medoids.T[::-1])]
 
 	def annotate_atom_idx(self, mol: Chem.rdchem.Mol):
 		for i, atom in enumerate(mol.GetAtoms()):
