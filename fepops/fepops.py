@@ -240,6 +240,7 @@ class Fepops:
 			centroid_coors = kmeans.cluster_centers_
 			instance_cluster_labels = kmeans.labels_
 		elif kmeans_method.startswith("pytorch"):
+			torch.manual_seed(seed)
 			mol_coors_torch = torch.from_numpy(atom_coords).to(
 				"cuda" if kmeans_method.endswith("gpu") else "cpu"
 			)
