@@ -1,7 +1,7 @@
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem import MolStandardize
-from rdkit.Chem import Crippen
+from rdkit.Chem import Crippen, Lipinski
 from rdkit.Chem import rdMolTransforms
 from sklearn.cluster import KMeans as _SKLearnKMeans
 from fast_pytorch_kmeans import KMeans as _FastPTKMeans
@@ -571,6 +571,10 @@ class Fepops:
 			return None
 
 		mol = Chem.AddHs(mol)
+		if Lipinski.HeavyAtomCount(mol) < self.num_centroids_per_fepop:
+			print (ValueError(f"Number of heavy atoms (:{Lipinski.HeavyAtomCount(mol)}) below requested feature points (:{self.num_centroids_per_fepop})"))
+			return None
+		
 		tautomers_list = self.tautomer_enumerator.enumerate(mol)
 		each_mol_with_all_confs_list = []
 		for index, t_mol in enumerate(tautomers_list):
