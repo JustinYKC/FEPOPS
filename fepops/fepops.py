@@ -38,14 +38,14 @@ class Fepops:
 	def __init__(
 			self,
 			kmeans_method: str = "pytorch-cpu",
-			max_tautomers:Optional[int]=None,
+			max_tautomers:Optional[int] = None,
 			*,
-			num_fepops_per_mol:int=7,
-			num_centroids_per_fepop:int=4,
+			num_fepops_per_mol:int = 7,
+			num_centroids_per_fepop:int = 4,
 			):
 
-		self.num_fepops_per_mol=num_fepops_per_mol
-		self.num_centroids_per_fepop=num_centroids_per_fepop
+		self.num_fepops_per_mol = num_fepops_per_mol
+		self.num_centroids_per_fepop = num_centroids_per_fepop
 		self.implemented_kmeans_methods = ["sklearn", "pytorch-cpu", "pytorch-gpu"]
 		self.sort_by_features_col_index_dict = {
 			"charge": 0,
@@ -287,9 +287,9 @@ class Fepops:
 		"""
 
 		if is_distance_matrix:
-			distance_matrix=centroid_coords_or_distmat
+			distance_matrix = centroid_coords_or_distmat
 		else:
-			distance_matrix=squareform(pdist(centroid_coords_or_distmat))
+			distance_matrix = squareform(pdist(centroid_coords_or_distmat))
 		distances = np.array([distance_matrix[0,distance_matrix.shape[0]-1]]+[ele for arr in [distance_matrix.diagonal(i) for i in range(1,distance_matrix.shape[0]-1)] for ele in arr])
 		return distances
 
@@ -504,8 +504,8 @@ class Fepops:
 		"""
 		centroid_coords, instance_cluster_labels = self._perform_kmeans(
 			mol.GetConformer(0).GetPositions(),
-			num_centroids=self.num_centroids_per_fepop,
-			kmeans_method=kmeans_method_str,
+			num_centroids = self.num_centroids_per_fepop,
+			kmeans_method = kmeans_method_str,
 		)
 
 		atomic_logP_dict = self._calculate_atomic_logPs(mol)
@@ -528,13 +528,13 @@ class Fepops:
 			)
 
 			if any(atom_id in hb_acceptors for atom_id in centroid_atomic_id ):
-				hba=1
+				hba = 1
 			else:
-				hba=0
+				hba = 0
 			if any(atom_id in hb_donors for atom_id in centroid_atomic_id ):
-				hbd=1
+				hbd = 1
 			else:
-				hbd=0
+				hbd = 0
 
 			pharmacophore_features_arr[centroid,:] = sum_of_charge, sum_of_logP, hbd, hba
 
@@ -572,7 +572,7 @@ class Fepops:
 
 		mol = Chem.AddHs(mol)
 		if Lipinski.HeavyAtomCount(mol) < self.num_centroids_per_fepop:
-			print (ValueError(f"Number of heavy atoms (:{Lipinski.HeavyAtomCount(mol)}) below requested feature points (:{self.num_centroids_per_fepop})"))
+			print (f"Number of heavy atoms (:{Lipinski.HeavyAtomCount(mol)}) below requested feature points (:{self.num_centroids_per_fepop})")
 			return None
 		
 		tautomers_list = self.tautomer_enumerator.enumerate(mol)
@@ -581,12 +581,12 @@ class Fepops:
 			conf_list = self.generate_conformers(t_mol)
 			each_mol_with_all_confs_list.extend(conf_list)
 
-		if each_mol_with_all_confs_list==[]:
+		if each_mol_with_all_confs_list == []:
 			return None
 
-		pharmacophore_feature_all_confs=np.array(
+		pharmacophore_feature_all_confs = np.array(
 			[self.get_centroid_pharmacophoric_features(each_mol,
-					      kmeans_method_str=self.kmeans_method_str,
+					      kmeans_method_str = self.kmeans_method_str,
 			)
 			for each_mol in each_mol_with_all_confs_list]
 		)
@@ -621,35 +621,35 @@ class Fepops:
 		float
 			Fepops score, higher is better. 1 is the maximum.
 		"""		
-		n_distances=((self.num_centroids_per_fepop**2)-self.num_centroids_per_fepop)//2
+		n_distances = ((self.num_centroids_per_fepop**2)-self.num_centroids_per_fepop)//2
 		x1_desc = x1[:-n_distances].reshape(self.num_centroids_per_fepop,-1)
 		x2_desc, x2_dists = x2[:-n_distances].reshape(self.num_centroids_per_fepop,-1), x2[-n_distances:]
 
 
-		permutation_tuples=list(itertools.permutations(range(self.num_centroids_per_fepop)))
+		permutation_tuples = list(itertools.permutations(range(self.num_centroids_per_fepop)))
 		# Find permutation which gives highest sum of correlations to x1 descriptor
-		best_permutaion=permutation_tuples[np.argmax([cdist(x1_desc, x2_desc[perm_tuple, :], metric=lambda x,y: np.corrcoef(x,y)[0,1]).diagonal().sum() for perm_tuple in permutation_tuples])]
+		best_permutaion = permutation_tuples[np.argmax([cdist(x1_desc, x2_desc[perm_tuple, :], metric=lambda x,y: np.corrcoef(x,y)[0,1]).diagonal().sum() for perm_tuple in permutation_tuples])]
 
 		# Rebuild x2 distances to squareform matrix, then reorder as per the best permutation and extract in required FEPOPS order.
-		dmat=np.zeros((self.num_centroids_per_fepop, self.num_centroids_per_fepop))
-		dmat[0,-1]=x2_dists[0]
-		dmat[-1,0]=x2_dists[0]
+		dmat = np.zeros((self.num_centroids_per_fepop, self.num_centroids_per_fepop))
+		dmat[0,-1] = x2_dists[0]
+		dmat[-1,0] = x2_dists[0]
 		rows, cols = np.diag_indices_from(dmat)
 		for (r, c), v in zip([(x,y) for d in [np.stack((rows[:-i], cols[i:]), axis=1) for i in range(1, dmat.shape[0]-1)] for x,y in d], x2_dists):
-			dmat[r,c]=v
-			dmat[c,r]=v
+			dmat[r,c] = v
+			dmat[c,r] = v
 
 		# Reorder the distance matrix using best permutation
-		new_dmat=np.zeros_like(dmat)
+		new_dmat = np.zeros_like(dmat)
 		for i, p in enumerate(best_permutaion):
 			for j in range(dmat.shape[0]):
-				if i==j:continue
-				new_dmat[i,j]=dmat[p,best_permutaion[j]]
+				if i == j:continue
+				new_dmat[i,j] = dmat[p,best_permutaion[j]]
 		
-		distances=self._get_centroid_distances(new_dmat, is_distance_matrix=True)
+		distances = self._get_centroid_distances(new_dmat, is_distance_matrix=True)
 		
 		# Reform x2 with reordered medoids and medoid distances
-		x2=np.hstack([x2_desc[[best_permutaion]].flatten(),distances])
+		x2 = np.hstack([x2_desc[[best_permutaion]].flatten(),distances])
 		
 		# Apply softmax and return pearson correlation between the two
 		return np.corrcoef(softmax(x1), softmax(x2))[0,1]
