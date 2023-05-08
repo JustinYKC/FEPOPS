@@ -435,7 +435,7 @@ class Fepops:
 			for dihedral_atoms in dihedrals
 		]
 		bond_states = self._sample_bond_states(
-			len(dihedrals), abs(hash(str(mol.GetConformer(0).GetPositions())))
+			len(dihedrals), [random_seed, mol.GetNumAtoms(), mol.GetNumBonds()]
 		)
 
 		new_conf_mol_list = []
