@@ -423,8 +423,12 @@ class Fepops:
 		"""
 		try:
 			mol = Chem.AddHs(mol)
+			
+			params = AllChem.ETKDGv3()
+			params.useSmallRingTorsions = True
+			params.randomSeed = random_seed
 			original_conformer = mol.GetConformer(
-				AllChem.EmbedMolecule(mol, randomSeed=random_seed)
+				AllChem.EmbedMolecule(mol, params)
 			)
 		except ValueError:
 			print("Conformer embedding failed")
