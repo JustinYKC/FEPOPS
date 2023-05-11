@@ -431,8 +431,18 @@ class Fepops:
 				AllChem.EmbedMolecule(mol, params)
 			)
 		except ValueError:
-			print("Conformer embedding failed")
-			return []
+			params = AllChem.ETKDGv2()
+			id = AllChem.EmbedMolecule(mol, params)
+			if id == -1:
+				print("Coords could not be generated without using random coords. using random coords now")
+				params.useRandomCoords = True
+			try:
+				original_conformer = mol.GetConformer(
+					AllChem.EmbedMolecule(mol, params)
+				)
+			except ValueError:
+				print("Conformer embedding failed")
+				return []
 		dihedrals = self._get_dihedrals(mol)
 		starting_angles = [
 			rdMolTransforms.GetDihedralDeg(original_conformer, *dihedral_atoms)
