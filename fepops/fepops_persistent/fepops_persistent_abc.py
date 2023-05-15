@@ -231,10 +231,11 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
 		}
 		return canonical_smiles_to_mol_dict
 	
+	@abstractmethod
 	def calc_similarity(
 		self,
-		query: Union[str, Path, list[str]],
-		candidate: Union[str, Path, list[str]],
+		fepops_features_1: Union[np.ndarray, None],
+		fepops_features_2: Union[np.ndarray, None],
 	):
 		"""Calculate FEPOPS similarity
 
@@ -256,12 +257,11 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
 		float
 			Fepops similarity between two molecules
 		"""
-		if isinstance(query, str):
-			query = self.get_fepops(query)
-		if isinstance(candidate, str):
-			candidate = self.get_fepops(candidate)
-		return np.max(cdist(query, candidate, metric=self.fepops_object._score))
-	
+		if any(x is None for x in (fepops_features_1, fepops_features_2)):
+			raise ValueError(
+				f"Unable to calculate similarity due to NoneType found in the fepops features:(fepops_features_1, fepops_features_2)=({type(fepops_features_1)}, {type(fepops_features_2)})"
+			)
+		
 	def write(self):
 		pass
 
