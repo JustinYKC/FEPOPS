@@ -670,8 +670,8 @@ class Fepops:
 
 	def calc_similarity(
 		self,
-		query: Union[np.ndarray, str],
-		candidate: Union[np.ndarray, str],
+		query: Union[np.ndarray, str, None],
+		candidate: Union[np.ndarray, str, None],
 	) -> float:
 		"""Calculate FEPOPS similarity
 
@@ -697,6 +697,10 @@ class Fepops:
 			query = self.get_fepops(query)
 		if isinstance(candidate, str):
 			candidate = self.get_fepops(candidate)
+		if any(x is None for x in (query, candidate)):
+			raise ValueError(
+				f"Unable to calculate similarity due to NoneType found in the fepops features:(query, candidate)=({type(query)}, {type(candidate)})"
+			)
 		return np.max(cdist(query, candidate, metric=self._score_combialign))
 
 	def __call__(
