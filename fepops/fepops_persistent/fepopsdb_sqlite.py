@@ -1,4 +1,5 @@
 from .fepops_persistent_abc import FepopsPersistentAbstractBaseClass
+from scipy.spatial.distance import cdist
 from typing import Union
 from pathlib import Path
 import sqlite3
@@ -47,7 +48,8 @@ class FepopsDBSqlite(FepopsPersistentAbstractBaseClass):
 		sqlite3.register_adapter(np.ndarray, adapt_array)
 		sqlite3.register_converter("array", convert_array)
 
-	def add_fepop(self, rdkit_canonical_smiles: str, fepops: np.ndarray):
+	def add_fepop(self, rdkit_canonical_smiles: str, fepops: Union[np.ndarray, None]):
+		if fepops is None: fepops = np.array([np.NaN])
 		super().add_fepop(rdkit_canonical_smiles=rdkit_canonical_smiles, fepops=fepops)
 		if not self.fepop_exists(rdkit_canonical_smiles=rdkit_canonical_smiles):
 			self.cur.execute(
@@ -56,7 +58,7 @@ class FepopsDBSqlite(FepopsPersistentAbstractBaseClass):
 			)
 			self.con.commit()
 
-	def fepop_exists(self, rdkit_canonical_smiles: str)->bool:
+	def fepop_exists(self, rdkit_canonical_smiles: str) -> bool:
 		"""Check if Fepop exists in the database
 
 		If the fepops object was constructed with a database file, then
@@ -84,14 +86,27 @@ class FepopsDBSqlite(FepopsPersistentAbstractBaseClass):
 			return False
 		return True
 	
-	def get_fepop(self, smiles, is_canonical=False)->Union[np.ndarray, None]:
+	def get_fepop(self, smiles, is_canonical=False) -> Union[np.ndarray, None]:
 		super().get_fepop(smiles=smiles)
 		rdkit_canonical_smiles, mol = self._get_can_smi_mol_tuple(smiles, is_canonical=is_canonical)
 		if self.fepop_exists(rdkit_canonical_smiles):
 			res = self.cur.execute(f"""SELECT fepops FROM fepops_lookup_table where cansmi="{rdkit_canonical_smiles}" """)
-			return res.fetchone()[0].reshape(7,-1)
+			try:
+				return res.fetchone()[0].reshape(7,-1)
+			except:
+				return res.fetchone()
 		else:
 			fepops_descriptors=self.fepops_object.get_fepops(mol)
 			self.add_fepop(rdkit_canonical_smiles=rdkit_canonical_smiles, fepops=fepops_descriptors)
 			return fepops_descriptors
-		
+	
+	def calc_similarity(self, 
+		query: Union[np.ndarray, str],
+		candidate: Union[np.ndarray, str],
+	) -> float:
+		if isinstance(query, str):
+			query = self.get_fepop(query)
+		if isinstance(candidate, str):
+			candidate = self.get_fepop(candidate)
+		super().calc_similarity(fepops_features_1=query, fepops_features_2=candidate)
+		return np.max(cdist(query, candidate, metric=self.fepops_object._score_combialign))
