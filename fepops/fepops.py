@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 from scipy.spatial.distance import cdist, squareform, pdist
 from scipy.special import softmax
 import numpy as np
-import itertools
+import itertools, zlib
 import torch
 from typing import Union, Optional
 
@@ -449,7 +449,7 @@ class Fepops:
             for dihedral_atoms in dihedrals
         ]
         bond_states = self._sample_bond_states(
-            len(dihedrals), [random_seed, mol.GetNumAtoms(), mol.GetNumBonds()]
+            len(dihedrals), zlib.crc32(mol.GetConformer(0).GetPositions().tobytes())
         )
 
         new_conf_mol_list = []
