@@ -1,4 +1,5 @@
 from .fepops_persistent_abc import FepopsPersistentAbstractBaseClass
+from scipy.spatial.distance import cdist
 from typing import Union
 from pathlib import Path
 import bz2
@@ -16,41 +17,42 @@ class FepopsDBJSON(FepopsPersistentAbstractBaseClass):
 		n_jobs: int = -1,
 	):
 		super().__init__(
-			database_file=database_file,
-			kmeans_method=kmeans_method,
-			parallel=parallel,
-			n_jobs=n_jobs,
+			database_file = database_file,
+			kmeans_method = kmeans_method,
+			parallel = parallel,
+			n_jobs = n_jobs,
 		)
 		
 		if not self.database_file.parent.exists():
 			self.database_file.parent.mkdir(parents=True)
 		if self.database_file.exists():
-			self.db=json.load(open(self.database_file, "r"))
+			self.db = json.load(open(self.database_file, "r"))
 		else:
 			self.db={}
-		self._db_changed=False
-		self._was_written=False
+		self._db_changed = False
+		self._was_written = False
 			
-
-	def add_fepop(self, rdkit_canonical_smiles: str, fepops: np.ndarray):
+	def add_fepop(self, rdkit_canonical_smiles: str, fepops: Union[np.ndarray, None]):
+		if fepops is None: fepops = np.array([np.NaN])
 		super().add_fepop(rdkit_canonical_smiles=rdkit_canonical_smiles, fepops=fepops)
 		if not self.fepop_exists(rdkit_canonical_smiles=rdkit_canonical_smiles):
-			self.db[rdkit_canonical_smiles]=b64encode(bz2.compress(fepops.tobytes())).decode('ascii')
-			self._db_changed=True
+			self.db[rdkit_canonical_smiles] = b64encode(bz2.compress(fepops.tobytes())).decode('ascii')
+			self._db_changed = True
 			
-
 	def get_fepop(self, smiles: str, is_canonical:bool=False) -> Union[np.ndarray, None]:
 		super().get_fepop(smiles=smiles)
 		if not is_canonical:
 			smiles, mol = self._get_can_smi_mol_tuple(smiles)
 		if self.fepop_exists(rdkit_canonical_smiles=smiles):
-			return np.frombuffer(bz2.decompress(b64decode(self.db[smiles].encode()))).reshape(7,-1)
+			res = np.frombuffer(bz2.decompress(b64decode(self.db[smiles].encode())))
+			if np.isnan(res).any(): return None
+			else: return res.reshape(7,-1)
 		else:
-			new_fepops=self.fepops_object.get_fepops(mol)
+			new_fepops = self.fepops_object.get_fepops(mol)
 			self.add_fepop(rdkit_canonical_smiles=smiles, fepops=new_fepops)
 			return new_fepops
 		
-	def fepop_exists(self, rdkit_canonical_smiles: str)->bool:
+	def fepop_exists(self, rdkit_canonical_smiles: str) -> bool:
 		"""Check if Fepop exists in the database
 
 		If the fepops object was constructed with a database file, then
@@ -69,10 +71,21 @@ class FepopsDBJSON(FepopsPersistentAbstractBaseClass):
 		"""
 		return rdkit_canonical_smiles in self.db
 	
+	def calc_similarity(self, 
+		query: Union[np.ndarray, str],
+		candidate: Union[np.ndarray, str],
+	) -> float:
+		if isinstance(query, str):
+			query = self.get_fepop(query)
+		if isinstance(candidate, str):
+			candidate = self.get_fepop(candidate)
+		super().calc_similarity(fepops_features_1=query, fepops_features_2=candidate)
+		return np.max(cdist(query, candidate, metric=self.fepops_object._score_combialign))
+	
 	def write(self):
 		if self._db_changed:
 			json.dump(self.db, open(self.database_file, "w"))
-			self._was_written=True
+			self._was_written = True
 
 	def __enter__(self):
 		return self
