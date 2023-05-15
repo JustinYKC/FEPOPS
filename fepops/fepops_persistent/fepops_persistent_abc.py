@@ -90,7 +90,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
 		if not self.parallel:
 			for rdkit_canonical_smiles, mol in canonical_smiles_to_mol_dict.items():
 				self.add_fepop(
-					rdkit_canonical_smiles, self.fepops_object._get_fepops(mol)
+					rdkit_canonical_smiles, self.fepops_object.get_fepops(mol)
 				)
 			print(
 				f"Added {len(canonical_smiles_to_mol_dict)} new molecues to the database ({self.database_file})"
