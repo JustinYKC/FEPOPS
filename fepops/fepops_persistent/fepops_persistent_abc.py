@@ -229,8 +229,8 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
 
     def calc_similarity(
         self,
-        fepops_features_1: Union[np.ndarray, None],
-        fepops_features_2: Union[np.ndarray, None],
+        fepops_features_1: Union[np.ndarray, str, None],
+        fepops_features_2: Union[np.ndarray, str, None],
     ):
         """Calculate FEPOPS similarity
 
