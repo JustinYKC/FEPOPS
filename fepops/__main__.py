@@ -100,4 +100,5 @@ if __name__ == "__main__":
     if args.subcmd == "save_descriptors":
         f_persistent = get_persistent_fepops_storage_object(args.database_file)
         f_persistent.save_descriptors(args.smiles_file)
-      
+        if args.database_file.endswith((".json")):
+            f_persistent.write()
