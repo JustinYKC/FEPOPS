@@ -178,9 +178,8 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
             finally:
                 mol = None
         if mol is None:
-            raise ValueError(
-                f"Could not parse smiles to a valid molecule, smiles was:{s}"
-            )
+            print (f"Could not parse smiles to a valid molecule, smiles was: {s}")
+            return (s, mol)
         if is_canonical:
             return (s, mol)
         else:
@@ -201,7 +200,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
                     f"smiles file ({smiles}) not found. If you are passing smiles, make it into a list"
                 )
         if not isinstance(smiles, list):
-            raise (
+            raise ValueError(
                 "smiles should be a str or Path denoting the location of a smiles file, or a list of smiles"
             )
         smiles = list(set(smiles))

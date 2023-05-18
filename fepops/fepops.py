@@ -319,9 +319,7 @@ class Fepops:
             except:
                 pass
         if mol is None:
-            raise ValueError(
-                f"Could not parse smiles to a valid molecule, smiles was:{smiles_string}"
-            )
+            print (f"Could not parse smiles to a valid molecule, smiles was: {smiles_string}")
         return mol
 
     def _get_flanking_atoms(
@@ -563,7 +561,7 @@ class Fepops:
         )
         return pharmacophore_features_arr
 
-    def get_fepops(self, mol: Union[str, Chem.rdchem.Mol]) -> Union[np.ndarray, None]:
+    def get_fepops(self, mol: Union[str, None, Chem.rdchem.Mol]) -> Union[np.ndarray, None]:
         """Get Fepops descriptors
 
         This method returns Fepops descriptors from a smiles string.
