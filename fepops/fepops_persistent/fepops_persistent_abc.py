@@ -133,42 +133,6 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
             )
 
     @staticmethod
-    def _mol_from_smiles(smiles_string: str) -> Chem.rdchem.Mol:
-        """Parse smiles to mol, catching errors
-
-        Parameters
-        ----------
-        smiles_string : str
-                Smiles string
-
-        Returns
-        -------
-        Chem.rdchem.Mol
-                RDkit molecule
-
-        Raises
-        ------
-        ValueError
-                Unable to parse smiles into a molecule
-        """
-        if not isinstance(smiles_string, str):
-            raise ValueError(
-                f"Expected a smiles string but a {type(smiles_string)} was passed"
-            )
-        try:
-            mol = Chem.MolFromSmiles(smiles_string)
-        except:
-            try:
-                mol = Chem.MolFromSmiles(smiles_string, sanitize=False)
-            finally:
-                mol = None
-        if mol is None:
-            raise ValueError(
-                f"Could not parse smiles to a valid molecule, smiles was:{smiles_string}"
-            )
-        return mol
-
-    @staticmethod
     def _get_can_smi_mol_tuple(s: str, is_canonical: bool = False):
         try:
             mol = Chem.MolFromSmiles(s)
@@ -178,7 +142,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
             finally:
                 mol = None
         if mol is None:
-            print (f"Could not parse smiles to a valid molecule, smiles was: {s}")
+            print(f"Could not parse smiles to a valid molecule, smiles was: {s}")
             return (s, mol)
         if is_canonical:
             return (s, mol)
