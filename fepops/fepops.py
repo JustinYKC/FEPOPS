@@ -46,10 +46,8 @@ class Fepops:
 
         self.implemented_kmeans_methods = ["sklearn", "pytorch-cpu", "pytorch-gpu"]
         self.sort_by_features_col_index_dict = {
-            "charge": 0,
-            "logP": 1,
-            "hba": 2,
-            "hbd": 3,
+            name: sort_order_index
+            for sort_order_index, name in enumerate(["charge", "logP", "hba", "hbd"])
         }
         self.num_fepops_per_mol = num_fepops_per_mol
         self.num_centroids_per_fepop = num_centroids_per_fepop
@@ -118,10 +116,9 @@ class Fepops:
                     chosen_x_point = np_rng.choice(np.arange(input_x.shape[0]))
                     medoids[i] = input_x[chosen_x_point, :]
                     point_to_centroid_map[chosen_x_point] = i
-                medoids[i] = np.median(
-                    input_x[point_to_centroid_map == i], axis=0
-                )  # Using median to ensure the minimum distance to its medoid_members is returned
-        # Return medoids sorted by the first column (charge), second to last, then 3rd first etc.
+                medoids[i] = np.median(input_x[point_to_centroid_map == i], axis=0)
+        # Sorting at this stage for reproducibility with existing pregenerated
+        # descriptor sets.
         return medoids[np.lexsort(medoids.T[::-1])]
 
     def annotate_atom_idx(self, mol: Chem.rdchem.Mol):
@@ -263,12 +260,6 @@ class Fepops:
                 f"The method selected for the k-means calculation is invalid, please use one of {self.implemented_kmeans_methods}"
             )
         return centroid_coors, instance_cluster_labels
-
-    def _sort_kmeans_centroids(
-        self, pharmacophore_features_arr: np.ndarray, sort_by_features: str = "charge"
-    ) -> np.ndarray:
-        sort_index = self.sort_by_features_col_index_dict[sort_by_features]
-        return pharmacophore_features_arr[:, sort_index].argsort()
 
     def _get_centroid_distances(
         self, centroid_coords_or_distmat: np.ndarray, is_distance_matrix: bool
@@ -575,11 +566,10 @@ class Fepops:
                 hba,
             )
 
-        sorted_index_rank_arr = self._sort_kmeans_centroids(
-            pharmacophore_features_arr, "charge"
-        )
+        sorted_index_rank_arr = np.lexsort(pharmacophore_features_arr.T[::-1])
         centroid_coords = centroid_coords[sorted_index_rank_arr]
         pharmacophore_features_arr = pharmacophore_features_arr[sorted_index_rank_arr]
+
         centroid_dist = self._get_centroid_distances(
             centroid_coords, is_distance_matrix=False
         )
@@ -668,32 +658,42 @@ class Fepops:
         float
             Fepops score, higher is better. 1 is the maximum.
         """
-
         x1_desc = x1[: -self.num_distances_per_fepop].reshape(
-            -1, self.num_centroids_per_fepop * self.num_features_per_fepop
+            self.num_centroids_per_fepop, self.num_features_per_fepop
         )
         x2_desc = x2[: -self.num_distances_per_fepop].reshape(
-            -1, self.num_centroids_per_fepop * self.num_features_per_fepop
+            self.num_centroids_per_fepop, self.num_features_per_fepop
         )
         x2_dists = x2[-self.num_distances_per_fepop :]
 
         permutation_tuples = list(
             itertools.permutations(range(self.num_centroids_per_fepop))
         )
-        # Find permutation which gives highest sum of correlations to x1 descriptor
+
+        # Vectorised correlation coefficient calculations performed in numpy,
+        # calculating all 24 permutations and the best fit (highest sum
+        # correlation) used as the best fepop ordering of centroids.
+        # This is magnitudes faster than a previous approach taken whereby
+        # numpy corrcoef was run many times and resulted in extremely slow
+        # scoring code. The folowing blog post helped immesely with this
+        # code:
+        # https://waterprogramming.wordpress.com/2014/06/13/numpy-vectorized-correlation-coefficient/
+
+        # Make mega block of fepops for x2, containing all perturbations
+        x2_mega_desc = x2_desc[permutation_tuples]
+        x1_mean = x1_desc.mean(axis=-2)
+        # As all permutations give the same mean (of columns/features),
+        # just do the first.
+        x2_mean = x2_mega_desc[0].mean(axis=-2)
+        x1_residual = x1_desc - x1_mean
+        x2_residual = x2_mega_desc - x2_mean
+        numerator = np.sum(x1_residual * x2_residual, axis=-1)
+        denominator = np.sqrt(
+            np.sum(x1_residual**2, axis=-1)
+            * np.sum((x2_mega_desc - x2_mean) ** 2, axis=-1)
+        )
         best_permutaion = permutation_tuples[
-            np.argmax(
-                [
-                    cdist(
-                        x1_desc,
-                        x2_desc[perm_tuple, :],
-                        metric=lambda x, y: np.corrcoef(x.T, y.T)[0, 1],
-                    )
-                    .diagonal()
-                    .sum()
-                    for perm_tuple in permutation_tuples
-                ]
-            )
+            np.argmax(np.sum(numerator / denominator, axis=-1))
         ]
 
         # Rebuild x2 distances to squareform matrix, then reorder as per the best permutation and extract in required FEPOPS order.
