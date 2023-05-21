@@ -40,9 +40,10 @@ class ROCScorer:
             )
         labels = np.array(df[active_flag_column_title].tolist(), dtype=int)
         scores_dict = {sm.name: [] for sm in self.similarity_methods}
-        for active in df.query(f"{active_flag_column_title}==1")[
-            smiles_column_title
-        ].tolist():
+        for active in tqdm(
+            df.query(f"{active_flag_column_title}==1")[smiles_column_title].tolist(),
+            desc="Assessing active recall (AUROC)",
+        ):
             scores = np.array(
                 [
                     [
@@ -52,7 +53,12 @@ class ROCScorer:
                     for s in df[smiles_column_title].tolist()
                 ]
             )
-            roc_scores = [roc_auc_score(labels, s) for s in scores.T]
+            roc_scores = [
+                roc_auc_score(
+                    labels[np.argwhere(~np.isnan(s))], s[np.argwhere(~np.isnan(s))]
+                )
+                for s in scores.T
+            ]
             [
                 scores_dict[m.name].append(rs)
                 for m, rs in zip(self.similarity_methods, roc_scores)
@@ -180,8 +186,8 @@ class FepopsBenchmarker:
                 index_col=[0],
                 header=0,
             ).reset_index(),
-            smiles_column_title="Std_SMILES",
-            active_flag_column_title="Activity",
+            smiles_column_title=smiles_column_title,
+            active_flag_column_title=active_flag_column_title,
         )
         print(pd.DataFrame.from_dict(scores_dict).describe())
 

@@ -43,10 +43,10 @@ class FepopsDBJSON(FepopsPersistentAbstractBaseClass):
             ).decode("ascii")
             self._db_changed = True
 
-    def get_fepop(
+    def get_fepops(
         self, smiles: str, is_canonical: bool = False
     ) -> Union[np.ndarray, None]:
-        super().get_fepop(smiles=smiles)
+        super().get_fepops(smiles=smiles)
         if not is_canonical:
             smiles, mol = self._get_can_smi_mol_tuple(smiles)
         if self.fepop_exists(rdkit_canonical_smiles=smiles):

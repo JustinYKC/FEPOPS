@@ -11,7 +11,13 @@ from scipy.special import softmax
 import numpy as np
 import itertools, zlib
 import torch
-from typing import Union, Optional
+from typing import Union, Optional, Tuple
+from enum import Enum
+
+GetFepopStatusCode = Enum(
+    "GetFepopStatusCode",
+    ["SUCCESS", "FAILED_TO_GENERATE", "FAILED_TO_RETRIEVE", "FAILED_RETRIEVED_NONE"],
+)
 
 
 class Fepops:
@@ -580,7 +586,7 @@ class Fepops:
 
     def get_fepops(
         self, mol: Union[str, None, Chem.rdchem.Mol]
-    ) -> Union[np.ndarray, None]:
+    ) -> Tuple[GetFepopStatusCode, Union[np.ndarray, None]]:
         """Get Fepops descriptors
 
         This method returns Fepops descriptors from a smiles string.
@@ -588,25 +594,36 @@ class Fepops:
 
         Parameters
         ----------
-        smiles_string : str
-            SMILES string of an input molecule.
+        mol : Union[str, None, Chem.rdchem.Mol]
+            Molecule as a SMILES string or RDKit molecule. Can also be None,
+            in which case a failure error status is returned along with None
+            in place of the requested Fepops descriptors.
 
         Returns
         -------
-        np.ndarray
-            A Numpy array containing the calculated Fepops descriptors of an input molecule.
+        Tuple[GetFepopStatusCode, Union[np.ndarray, None]]
+            Returns a tuple, with the first value being a GetFepopStatusCode
+            (enum) denoting SUCCESS or FAILED_TO_GENERATE. The second tuple
+            element is either None (if unsuccessful), or a np.ndarray containing
+            the calculated Fepops descriptors of the requested input molecule.
         """
+        original_smiles = None
+        if isinstance(mol, np.ndarray):
+            return GetFepopStatusCode.SUCCESS, mol
         if isinstance(mol, str):
+            original_smiles = mol
             mol = self._mol_from_smiles(mol)
         if mol is None:
-            return None
-
-        mol = Chem.AddHs(mol)
+            print(
+                f"Failed to make a molecule{' from '+original_smiles if original_smiles is not None else ''}"
+            )
+            return GetFepopStatusCode.FAILED_TO_GENERATE, None
         if Lipinski.HeavyAtomCount(mol) < self.num_centroids_per_fepop:
             print(
-                f"Number of heavy atoms (:{Lipinski.HeavyAtomCount(mol)}) below requested feature points (:{self.num_centroids_per_fepop})"
+                f"Number of heavy atoms ({Lipinski.HeavyAtomCount(mol)}) below requested feature points ({self.num_centroids_per_fepop}) for molecule {original_smiles if original_smiles is not None else ''}"
             )
-            return None
+            return GetFepopStatusCode.FAILED_TO_GENERATE, None
+        mol = Chem.AddHs(mol)
 
         tautomers_list = self.tautomer_enumerator.enumerate(mol)
         each_mol_with_all_confs_list = []
@@ -615,7 +632,10 @@ class Fepops:
             each_mol_with_all_confs_list.extend(conf_list)
 
         if each_mol_with_all_confs_list == []:
-            return None
+            print(
+                f"Failed to generate conformers/tautomers {' for '+original_smiles if original_smiles is not None else ''}"
+            )
+            return GetFepopStatusCode.FAILED_TO_GENERATE, None
 
         pharmacophore_feature_all_confs = np.array(
             [
@@ -627,9 +647,10 @@ class Fepops:
             ]
         )
 
-        return self._get_k_medoids(
+        medoids = self._get_k_medoids(
             pharmacophore_feature_all_confs, self.num_fepops_per_mol
         )
+        return GetFepopStatusCode.SUCCESS, medoids
 
     def _score_combialign(self, x1: np.ndarray, x2: np.ndarray):
         """Score fepops using CombiAlign
@@ -727,7 +748,6 @@ class Fepops:
 
         # Reform x2 with reordered medoids and medoid distances
         x2 = np.hstack([x2_desc[[best_permutaion]].flatten(), distances])
-
         # Apply softmax and return pearson correlation between the two
         return np.corrcoef(softmax(x1), softmax(x2))[0, 1]
 
@@ -756,14 +776,14 @@ class Fepops:
         float
             Fepops similarity between two molecules
         """
-        if isinstance(query, str):
-            query = self.get_fepops(query)
-        if isinstance(candidate, str):
-            candidate = self.get_fepops(candidate)
-        if any(x is None for x in (query, candidate)):
-            raise ValueError(
-                f"Unable to calculate similarity due to NoneType found in the fepops features:(query, candidate)=({type(query)}, {type(candidate)})"
-            )
+        if not isinstance(query, np.ndarray):
+            query_status, query = self.get_fepops(query)
+            if query_status != GetFepopStatusCode.SUCCESS:
+                return np.nan
+        if not isinstance(candidate, np.ndarray):
+            candidate_status, candidate = self.get_fepops(candidate)
+            if candidate_status != GetFepopStatusCode.SUCCESS:
+                return np.nan
         return np.max(cdist(query, candidate, metric=self._score_combialign))
 
     def __call__(

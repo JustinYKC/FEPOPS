@@ -3,16 +3,11 @@ from pathlib import Path
 from typing import Union
 
 import numpy as np
-import torch
-from fast_pytorch_kmeans import KMeans as _FastPTKMeans
 from joblib import Parallel, delayed
 from rdkit import Chem
-from rdkit.Chem import AllChem, Crippen, MolStandardize, rdMolTransforms
 from scipy.spatial.distance import cdist, pdist, squareform
-from sklearn.cluster import KMeans as _SKLearnKMeans
-from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
-
+from fepops.fepops import GetFepopStatusCode
 from ..fepops import Fepops
 
 
@@ -37,10 +32,10 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
     Return True if the canonical smiles is already in the database, and False if not. super().fepop_exists may be called by the overridden
     function to perform type checks on arguments.
 
-    get_fepop(rdkit_canonical_smiles: str)
+    get_fepops(rdkit_canonical_smiles: str)
     --------------------------------------
-    Return a fepop from persistent storage. If it does not exist, then generate it by calling self.fepops_object.get_fepop which is supplied
-    by this base class. super().get_fepop may be called by the overridden function to perform type checks on arguments.
+    Return a fepop from persistent storage. If it does not exist, then generate it by calling self.fepops_object.get_fepops which is supplied
+    by this base class. super().get_fepops may be called by the overridden function to perform type checks on arguments.
     With this function in place it allows interface compatibility with a standard Fepops object.
 
     Inheriting functions may also define __enter__ and __exit__ methods for use with context handlers. If none are defined, then empty ones
@@ -79,27 +74,30 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
     def save_descriptors(
         self,
         smiles: Union[str, Path, list[str]],
+        add_failures_to_database: bool = True,
     ):
         canonical_smiles_to_mol_dict = self.get_cansmi_to_mol_dict_not_in_database(
             smiles
         )
         if not self.parallel:
             for rdkit_canonical_smiles, mol in canonical_smiles_to_mol_dict.items():
-                self.add_fepop(
-                    rdkit_canonical_smiles, self.fepops_object.get_fepops(mol)
-                )
+                status, fepops_array = self.fepops_object.get_fepops(mol)
+                if status == GetFepopStatusCode.SUCCESS or add_failures_to_database:
+                    self.add_fepop(rdkit_canonical_smiles, fepops_array)
             print(
                 f"Added {len(canonical_smiles_to_mol_dict)} new molecues to the database ({self.database_file})"
             )
         else:  # Do it in parallel
             cansmi_fepops_tuples = Parallel(n_jobs=self.n_jobs, prefer="threads")(
-                delayed(lambda sm: (sm[0], self.fepops_object.get_fepops(sm[1])))(
+                delayed(lambda sm: (sm[0], *self.fepops_object.get_fepops(sm[1])))(
                     (cs, m)
                 )
                 for cs, m in canonical_smiles_to_mol_dict.items()
             )
-            for rdkit_canonical_smiles, new_fepop in cansmi_fepops_tuples:
-                self.add_fepop(rdkit_canonical_smiles, new_fepop)
+            print(cansmi_fepops_tuples)
+            for rdkit_canonical_smiles, status, new_fepop in cansmi_fepops_tuples:
+                if status == GetFepopStatusCode.SUCCESS or add_failures_to_database:
+                    self.add_fepop(rdkit_canonical_smiles, new_fepop)
             print(
                 f"Added {len(canonical_smiles_to_mol_dict)} new molecues to the database ({self.database_file})"
             )
@@ -118,10 +116,10 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
             raise ValueError(f"Expected a fepop, but a {type(fepops)} was passed")
 
     @abstractmethod
-    def get_fepop(self, smiles: str) -> Union[np.ndarray, None]:
-        if not isinstance(smiles, str):
+    def get_fepops(self, smiles: Union[str, Chem.rdchem.Mol, np.ndarray]) -> None:
+        if not isinstance(smiles, (str, Chem.rdchem.Mol, np.ndarray)):
             raise ValueError(
-                f"Expected an rdkit canonical smiles string, but a {type(smiles)} was passed"
+                f"Expected an rdkit canonical smiles string, rdkit mol, or a numpy array of descriptors but a {type(smiles)} was passed"
             )
 
     @abstractmethod
@@ -216,14 +214,16 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
                 Fepops similarity between two molecules
         """
 
-        if isinstance(fepops_features_1, str):
-            fepops_features_1 = self.get_fepop(fepops_features_1)
-        if isinstance(fepops_features_2, str):
-            fepops_features_2 = self.get_fepop(fepops_features_2)
+        if isinstance(fepops_features_1, (str, Chem.rdchem.Mol)):
+            status, fepops_features_1 = self.get_fepops(fepops_features_1)
+            if status != GetFepopStatusCode.SUCCESS:
+                return np.nan
+        if isinstance(fepops_features_2, (str, Chem.rdchem.Mol)):
+            status, fepops_features_2 = self.get_fepops(fepops_features_2)
+            if status != GetFepopStatusCode.SUCCESS:
+                return np.nan
         if any(x is None for x in (fepops_features_1, fepops_features_2)):
-            raise ValueError(
-                f"Unable to calculate similarity due to NoneType found in the fepops features:(fepops_features_1, fepops_features_2)=({type(fepops_features_1)}, {type(fepops_features_2)})"
-            )
+            return np.nan
         return self.fepops_object.calc_similarity(fepops_features_1, fepops_features_2)
 
     def write(self):
