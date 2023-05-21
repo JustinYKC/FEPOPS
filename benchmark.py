@@ -13,30 +13,44 @@ from rdkit.Chem import AllChem
 from rdkit.Chem import DataStructs
 from sklearn.metrics import roc_auc_score
 
+
 @dataclass
 class SimilarityMethod:
-    name:str
-    score:Callable
+    name: str
+    score: Callable
 
 
-class ROCScorer():
-    def __init__(self, methods:list[SimilarityMethod])->None:
-        self.similarity_methods=methods
-    def get_auroc_scores(self,df:pd.DataFrame)->dict[str, float]:
-        if 'active' not in df.columns:
-            raise ValueError("DataFrame must have a 'active' column denoting that a compound is active")
-        labels=np.array(df['active'].tolist(), dtype=int)
-        scores_dict={sm.name:[] for sm in self.similarity_methods}
-        for active in df.query("active==1")['smiles'].tolist():
-            scores=np.array([[sim_method.score(active, s) for sim_method in self.similarity_methods] for s in df.smiles.tolist()])
-            roc_scores=[roc_auc_score(labels, s) for s in scores.T]
-            [scores_dict[m.name].append(rs) for m,rs in zip(self.similarity_methods, roc_scores)]
+class ROCScorer:
+    def __init__(self, methods: list[SimilarityMethod]) -> None:
+        self.similarity_methods = methods
+
+    def get_auroc_scores(self, df: pd.DataFrame) -> dict[str, float]:
+        if "active" not in df.columns:
+            raise ValueError(
+                "DataFrame must have a 'active' column denoting that a compound is active"
+            )
+        labels = np.array(df["active"].tolist(), dtype=int)
+        scores_dict = {sm.name: [] for sm in self.similarity_methods}
+        for active in df.query("active==1")["smiles"].tolist():
+            scores = np.array(
+                [
+                    [
+                        sim_method.score(active, s)
+                        for sim_method in self.similarity_methods
+                    ]
+                    for s in df.smiles.tolist()
+                ]
+            )
+            roc_scores = [roc_auc_score(labels, s) for s in scores.T]
+            [
+                scores_dict[m.name].append(rs)
+                for m, rs in zip(self.similarity_methods, roc_scores)
+            ]
         return scores_dict
 
 
-
 class FepopsBenchmarker:
-    def __init__(self, database_file:str='benchmark.db'):
+    def __init__(self, database_file: str = "benchmark.db"):
         """FEPOPS benchmarker
 
         Contains test data useful in assessing the peformance of the FEPOPS object
@@ -89,8 +103,6 @@ class FepopsBenchmarker:
             f"Median time to compute medoids with sklearn from 1024 fepops={np.median(timings)}, mean={np.mean(timings)}"
         )
 
-        
-
     def kmeans(self):
         """Benchmark kmedoid code using the standard classification dataset
 
@@ -102,46 +114,54 @@ class FepopsBenchmarker:
         1024 fepops.
 
         """
-        fepops_sklearn=Fepops(kmeans_method="sklearn")
+        fepops_sklearn = Fepops(kmeans_method="sklearn")
 
         cached_1k_1024_fepops = self.get_1k_x_1024_fepops()
         timings = np.empty(cached_1k_1024_fepops.shape[0])
         for i, f_1024 in enumerate(tqdm(cached_1k_1024_fepops, "Benchmarking")):
             start = time.time()
-            fepops_sklearn._perform_kmeans(f_1024,7, kmeans_method='sklearn')
+            fepops_sklearn._perform_kmeans(f_1024, 7, kmeans_method="sklearn")
             timings[i] = time.time() - start
         print(
             f"Median time to compute kmeans with sklearn from 1024 fepops={np.median(timings)}, mean={np.mean(timings)}"
         )
 
-        fepops_ptcpu=Fepops(kmeans_method="pytorch-cpu")
+        fepops_ptcpu = Fepops(kmeans_method="pytorch-cpu")
 
         timings = np.empty(cached_1k_1024_fepops.shape[0])
         for i, f_1024 in enumerate(tqdm(cached_1k_1024_fepops, "Benchmarking")):
             start = time.time()
-            fepops_ptcpu._perform_kmeans(f_1024,7,kmeans_method="pytorch-cpu")
+            fepops_ptcpu._perform_kmeans(f_1024, 7, kmeans_method="pytorch-cpu")
             timings[i] = time.time() - start
         print(
             f"Median time to compute kmeans with sklearn from 1024 fepops={np.median(timings)}, mean={np.mean(timings)}"
         )
 
     @staticmethod
-    def _score_morgan(m1:str, m2:str, smi_to_mol_func) -> float:
-        m1=smi_to_mol_func(m1)
-        m2=smi_to_mol_func(m2)
-        fp1=AllChem.GetMorganFingerprint(m1,2)
-        fp2=AllChem.GetMorganFingerprint(m2,2)
-        return DataStructs.DiceSimilarity(fp1,fp2)
+    def _score_morgan(m1: str, m2: str, smi_to_mol_func) -> float:
+        m1 = smi_to_mol_func(m1)
+        m2 = smi_to_mol_func(m2)
+        fp1 = AllChem.GetMorganFingerprint(m1, 2)
+        fp2 = AllChem.GetMorganFingerprint(m2, 2)
+        return DataStructs.DiceSimilarity(fp1, fp2)
 
-    def auroc_performance(self, data_tsv:Union[Path, str]):
-        roc_scorer=ROCScorer(
+    def auroc_performance(self, data_tsv: Union[Path, str]):
+        roc_scorer = ROCScorer(
             [
-                SimilarityMethod("Morgan", lambda x,y:self._score_morgan(x,y, self.fepops._mol_from_smiles)),
+                SimilarityMethod(
+                    "Morgan",
+                    lambda x, y: self._score_morgan(x, y, self.fepops._mol_from_smiles),
+                ),
                 SimilarityMethod("FEPOPS", self.fepops.calc_similarity),
             ]
         )
-        scores_dict=roc_scorer.get_auroc_scores(pd.read_csv(Path(data_tsv), sep="\t", index_col=[0], names=["smiles", "active"]))
+        scores_dict = roc_scorer.get_auroc_scores(
+            pd.read_csv(
+                Path(data_tsv), sep="\t", index_col=[0], names=["smiles", "active"]
+            )
+        )
         print(pd.DataFrame.from_dict(scores_dict).describe())
+
 
 if __name__ == "__main__":
     fire.Fire(FepopsBenchmarker)
