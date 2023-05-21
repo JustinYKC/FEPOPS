@@ -102,7 +102,11 @@ class FepopsDBSqlite(FepopsPersistentAbstractBaseClass):
             if np.isnan(fepop).any():
                 return None
             else:
-                return fepop.reshape(self.fepops_object.num_fepops_per_mol, -1)
+                return fepop.reshape(
+                    -1,
+                    self.fepops_object.num_centroids_per_fepop
+                    * self.fepops_object.num_features_per_fepop,
+                )
         else:
             fepops_descriptors = self.fepops_object.get_fepops(mol)
             self.add_fepop(

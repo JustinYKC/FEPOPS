@@ -54,7 +54,11 @@ class FepopsDBJSON(FepopsPersistentAbstractBaseClass):
             if np.isnan(res).any():
                 return None
             else:
-                return res.reshape(self.fepops_object.num_fepops_per_mol, -1)
+                return res.reshape(
+                    -1,
+                    self.fepops_object.num_centroids_per_fepop
+                    * self.fepops_object.num_features_per_fepop,
+                )
         else:
             new_fepops = self.fepops_object.get_fepops(mol)
             self.add_fepop(rdkit_canonical_smiles=smiles, fepops=new_fepops)

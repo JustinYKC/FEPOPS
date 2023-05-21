@@ -44,8 +44,6 @@ class Fepops:
         num_centroids_per_fepop: int = 4,
     ):
 
-        self.num_fepops_per_mol = num_fepops_per_mol
-        self.num_centroids_per_fepop = num_centroids_per_fepop
         self.implemented_kmeans_methods = ["sklearn", "pytorch-cpu", "pytorch-gpu"]
         self.sort_by_features_col_index_dict = {
             "charge": 0,
@@ -53,6 +51,12 @@ class Fepops:
             "hba": 2,
             "hbd": 3,
         }
+        self.num_fepops_per_mol = num_fepops_per_mol
+        self.num_centroids_per_fepop = num_centroids_per_fepop
+        self.num_features_per_fepop = len(self.sort_by_features_col_index_dict)
+        self.num_distances_per_fepop = (
+            (self.num_centroids_per_fepop**2) - self.num_centroids_per_fepop
+        ) // 2
         self.donor_mol_from_smarts = Chem.MolFromSmarts("[!H0;#7,#8,#9]")
         self.acceptor_mol_from_smarts = Chem.MolFromSmarts(
             "[!$([#6,F,Cl,Br,I,o,s,nX3,#7v5,#15v5,#16v4,#16v6,*+1,*+2,*+3])]"
@@ -73,10 +77,10 @@ class Fepops:
     def _get_k_medoids(
         self, input_x: np.ndarray, k: int = 7, seed: int = 42
     ) -> np.ndarray:
-        """Select k Fopops conformers to generate the final Fepops descriptors
+        """Select k Fepops from conformers
 
-        A private method used to perform k-medoids in order to derive the final Fepops descriptors
-        by selecting k representative Fepops conformers.
+        Gets k mediods from conformers (and conformers of tautomers) which
+        are representative of the molcule.
 
         Parameters
         ----------
@@ -116,7 +120,7 @@ class Fepops:
                     point_to_centroid_map[chosen_x_point] = i
                 medoids[i] = np.median(
                     input_x[point_to_centroid_map == i], axis=0
-                )  # Using median to ensure the minimum distance to its medoid_members to be returned
+                )  # Using median to ensure the minimum distance to its medoid_members is returned
         # Return medoids sorted by the first column (charge), second to last, then 3rd first etc.
         return medoids[np.lexsort(medoids.T[::-1])]
 
@@ -260,7 +264,7 @@ class Fepops:
             )
         return centroid_coors, instance_cluster_labels
 
-    def _sort_kmeans_centroid(
+    def _sort_kmeans_centroids(
         self, pharmacophore_features_arr: np.ndarray, sort_by_features: str = "charge"
     ) -> np.ndarray:
         sort_index = self.sort_by_features_col_index_dict[sort_by_features]
@@ -571,7 +575,7 @@ class Fepops:
                 hba,
             )
 
-        sorted_index_rank_arr = self._sort_kmeans_centroid(
+        sorted_index_rank_arr = self._sort_kmeans_centroids(
             pharmacophore_features_arr, "charge"
         )
         centroid_coords = centroid_coords[sorted_index_rank_arr]
@@ -664,14 +668,14 @@ class Fepops:
         float
             Fepops score, higher is better. 1 is the maximum.
         """
-        n_distances = (
-            (self.num_centroids_per_fepop**2) - self.num_centroids_per_fepop
-        ) // 2
-        x1_desc = x1[:-n_distances].reshape(self.num_centroids_per_fepop, -1)
-        x2_desc, x2_dists = (
-            x2[:-n_distances].reshape(self.num_centroids_per_fepop, -1),
-            x2[-n_distances:],
+
+        x1_desc = x1[: -self.num_distances_per_fepop].reshape(
+            -1, self.num_centroids_per_fepop * self.num_features_per_fepop
         )
+        x2_desc = x2[: -self.num_distances_per_fepop].reshape(
+            -1, self.num_centroids_per_fepop * self.num_features_per_fepop
+        )
+        x2_dists = x2[-self.num_distances_per_fepop :]
 
         permutation_tuples = list(
             itertools.permutations(range(self.num_centroids_per_fepop))
