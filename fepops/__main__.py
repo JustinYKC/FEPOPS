@@ -1,6 +1,6 @@
 import argparse
 from .fepops import Fepops
-from .fepops_persistent import FepopsDBSqlite, FepopsDBJSON
+from .fepops_persistent import get_persistent_fepops_storage_object
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate the FEPOPS descriptors")
@@ -71,13 +71,7 @@ if __name__ == "__main__":
         required=True,
     )
 
-    def get_persistent_fepops_storage_object(database_file: str):
-        if args.database_file.endswith(
-            (".sqlite", ".sqlite3", ".db", ".db3", ".s3db", ".sl3")
-        ):
-            return FepopsDBSqlite(args.database_file)
-        if args.database_file.endswith((".json")):
-            return FepopsDBJSON(args.database_file)
+    
 
     args = parser.parse_args()
     if args.subcmd == "get_fepops":
