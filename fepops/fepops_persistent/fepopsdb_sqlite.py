@@ -104,8 +104,11 @@ class FepopsDBSqlite(FepopsPersistentAbstractBaseClass):
             else:
                 return fepop.reshape(
                     -1,
-                    self.fepops_object.num_centroids_per_fepop
-                    * self.fepops_object.num_features_per_fepop,
+                    (
+                        self.fepops_object.num_centroids_per_fepop
+                        * self.fepops_object.num_features_per_fepop
+                    )
+                    + self.fepops_object.num_distances_per_fepop,
                 )
         else:
             fepops_descriptors = self.fepops_object.get_fepops(mol)

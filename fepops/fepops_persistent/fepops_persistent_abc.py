@@ -215,8 +215,6 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
         float
                 Fepops similarity between two molecules
         """
-        print(fepops_features_1)
-        print(fepops_features_2)
 
         if isinstance(fepops_features_1, str):
             fepops_features_1 = self.get_fepop(fepops_features_1)

@@ -71,8 +71,6 @@ if __name__ == "__main__":
         required=True,
     )
 
-    
-
     args = parser.parse_args()
     if args.subcmd == "get_fepops":
         if args.database_file is not None:

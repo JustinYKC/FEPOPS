@@ -8,10 +8,10 @@ from dataclasses import dataclass
 from typing import Callable, Union
 from pathlib import Path
 import pandas as pd
-from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem import DataStructs
 from sklearn.metrics import roc_auc_score
+from fepops.fepops_persistent import get_persistent_fepops_storage_object
 
 
 @dataclass
@@ -24,21 +24,32 @@ class ROCScorer:
     def __init__(self, methods: list[SimilarityMethod]) -> None:
         self.similarity_methods = methods
 
-    def get_auroc_scores(self, df: pd.DataFrame) -> dict[str, float]:
-        if "active" not in df.columns:
+    def get_auroc_scores(
+        self,
+        df: pd.DataFrame,
+        smiles_column_title="SMILES",
+        active_flag_column_title="Active",
+    ) -> dict[str, float]:
+        if active_flag_column_title not in df.columns:
             raise ValueError(
-                "DataFrame must have a 'active' column denoting that a compound is active"
+                f"Could not find a '{active_flag_column_title}' column in the DataFrame to indicate if the compound is active, or a decoy. Consider passing a column title to the 'active_flag_column_title' argument to get_auroc_scores"
             )
-        labels = np.array(df["active"].tolist(), dtype=int)
+        if smiles_column_title not in df.columns:
+            raise ValueError(
+                f"Could not find a '{smiles_column_title}' column in the DataFrame. Consider passing a column title to the 'active_flag_column_title' argument to get_auroc_scores"
+            )
+        labels = np.array(df[active_flag_column_title].tolist(), dtype=int)
         scores_dict = {sm.name: [] for sm in self.similarity_methods}
-        for active in df.query("active==1")["smiles"].tolist():
+        for active in df.query(f"{active_flag_column_title}==1")[
+            smiles_column_title
+        ].tolist():
             scores = np.array(
                 [
                     [
                         sim_method.score(active, s)
                         for sim_method in self.similarity_methods
                     ]
-                    for s in df.smiles.tolist()
+                    for s in df[smiles_column_title].tolist()
                 ]
             )
             roc_scores = [roc_auc_score(labels, s) for s in scores.T]
@@ -55,7 +66,7 @@ class FepopsBenchmarker:
 
         Contains test data useful in assessing the peformance of the FEPOPS object
         """
-        self.fepops = Fepops(database_file=database_file)
+        self.fepops = get_persistent_fepops_storage_object(database_file=database_file)
 
     def get_1k_x_1024_fepops(self):
         n_useful_features = 22
@@ -145,20 +156,32 @@ class FepopsBenchmarker:
         fp2 = AllChem.GetMorganFingerprint(m2, 2)
         return DataStructs.DiceSimilarity(fp1, fp2)
 
-    def auroc_performance(self, data_tsv: Union[Path, str]):
+    def auroc_performance(
+        self,
+        data_tsv: Union[Path, str],
+        smiles_column_title: str = "Std_SMILES",
+        active_flag_column_title: str = "Activity",
+    ):
         roc_scorer = ROCScorer(
             [
                 SimilarityMethod(
                     "Morgan",
-                    lambda x, y: self._score_morgan(x, y, self.fepops._mol_from_smiles),
+                    lambda x, y: self._score_morgan(
+                        x, y, self.fepops.fepops_object._mol_from_smiles
+                    ),
                 ),
                 SimilarityMethod("FEPOPS", self.fepops.calc_similarity),
             ]
         )
         scores_dict = roc_scorer.get_auroc_scores(
             pd.read_csv(
-                Path(data_tsv), sep="\t", index_col=[0], names=["smiles", "active"]
-            )
+                Path(data_tsv),
+                sep="\t",
+                index_col=[0],
+                header=0,
+            ).reset_index(),
+            smiles_column_title="Std_SMILES",
+            active_flag_column_title="Activity",
         )
         print(pd.DataFrame.from_dict(scores_dict).describe())
 
