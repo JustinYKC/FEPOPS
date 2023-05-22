@@ -128,6 +128,6 @@ class FepopsDBSqlite(FepopsPersistentAbstractBaseClass):
                     rdkit_canonical_smiles=rdkit_canonical_smiles,
                     fepops=fepops_descriptors,
                 )
-                return fepops_descriptors
+                return status, fepops_descriptors
             else:
                 return status, None
