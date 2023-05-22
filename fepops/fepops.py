@@ -13,6 +13,7 @@ import itertools, zlib
 import torch
 from typing import Union, Optional, Tuple
 from enum import Enum
+from sklearn.preprocessing import StandardScaler
 
 GetFepopStatusCode = Enum(
     "GetFepopStatusCode",
@@ -49,7 +50,7 @@ class Fepops:
         num_fepops_per_mol: int = 7,
         num_centroids_per_fepop: int = 4,
     ):
-
+        self.scaler=StandardScaler()
         self.implemented_kmeans_methods = ["sklearn", "pytorch-cpu", "pytorch-gpu"]
         self.sort_by_features_col_index_dict = {
             name: sort_order_index
@@ -290,22 +291,11 @@ class Fepops:
         np.ndarray
             Ordered centroid distances
         """
-
-        if is_distance_matrix:
-            distance_matrix = centroid_coords_or_distmat
+        if not is_distance_matrix:
+            dmat = squareform(pdist(centroid_coords_or_distmat))
         else:
-            distance_matrix = squareform(pdist(centroid_coords_or_distmat))
-        distances = np.array(
-            [distance_matrix[0, distance_matrix.shape[0] - 1]]
-            + [
-                ele
-                for arr in [
-                    distance_matrix.diagonal(i)
-                    for i in range(1, distance_matrix.shape[0] - 1)
-                ]
-                for ele in arr
-            ]
-        )
+            dmat = centroid_coords_or_distmat.copy()
+        distances = np.hstack([dmat[0,-1]]+[np.diagonal(dmat, offset=k) for k in range(1, dmat.shape[0]-1)])
         return distances
 
     def _mol_from_smiles(self, smiles_string: str) -> Chem.rdchem.Mol:
@@ -651,7 +641,26 @@ class Fepops:
             pharmacophore_feature_all_confs, self.num_fepops_per_mol
         )
         return GetFepopStatusCode.SUCCESS, medoids
+    def _score_scaler(self, x1: np.ndarray, x2: np.ndarray) -> float:
+        """Score function for the similarity calculation
 
+        The score function for the similarity calculation on the FEPOPS descriptors.
+
+        Parameters
+        ----------
+        x1 : np.ndarray
+            A Numpy array containing the FEPOPS descriptors 1.
+        x2 : np.ndarray
+            A Numpy array containing the FEPOPS descriptors 2.
+
+        Returns
+        -------
+        float
+            The FEPOPS similarity score (Pearson correlation).
+        """
+        x1 = self.scaler.fit_transform(x1.reshape(-1, 1))
+        x2 = self.scaler.fit_transform(x2.reshape(-1, 1))
+        return np.corrcoef(x1.flatten(), x2.flatten())[0, 1]
     def _score_combialign(self, x1: np.ndarray, x2: np.ndarray):
         """Score fepops using CombiAlign
 
@@ -716,40 +725,45 @@ class Fepops:
         best_permutaion = permutation_tuples[
             np.argmax(np.sum(numerator / denominator, axis=-1))
         ]
-
+        
         # Rebuild x2 distances to squareform matrix, then reorder as per the best permutation and extract in required FEPOPS order.
         dmat = np.zeros((self.num_centroids_per_fepop, self.num_centroids_per_fepop))
-        dmat[0, -1] = x2_dists[0]
-        dmat[-1, 0] = x2_dists[0]
-        rows, cols = np.diag_indices_from(dmat)
-        for (r, c), v in zip(
-            [
-                (x, y)
-                for d in [
-                    np.stack((rows[:-i], cols[i:]), axis=1)
-                    for i in range(1, dmat.shape[0] - 1)
-                ]
-                for x, y in d
-            ],
-            x2_dists,
-        ):
-            dmat[r, c] = v
-            dmat[c, r] = v
 
+        dmat[0, -1]=x2_dists[0]
+        dist_position=1
+        for offset in range(1, self.num_centroids_per_fepop-1):
+            num_in_diagonal=self.num_centroids_per_fepop-offset
+            dmat+=np.diag(x2_dists[dist_position:dist_position+num_in_diagonal], k=offset)
+            dist_position+=num_in_diagonal
+        # Not required, but for completeness, copy upper triangle to lower
+        # triangle of dmat matrix
+        dmat = dmat + dmat.T - np.diag(np.diag(dmat))
+        
         # Reorder the distance matrix using best permutation
+        
         new_dmat = np.zeros_like(dmat)
         for i, p in enumerate(best_permutaion):
             for j in range(dmat.shape[0]):
                 if i == j:
                     continue
                 new_dmat[i, j] = dmat[p, best_permutaion[j]]
-
         distances = self._get_centroid_distances(new_dmat, is_distance_matrix=True)
 
         # Reform x2 with reordered medoids and medoid distances
         x2 = np.hstack([x2_desc[[best_permutaion]].flatten(), distances])
         # Apply softmax and return pearson correlation between the two
-        return np.corrcoef(softmax(x1), softmax(x2))[0, 1]
+        
+        
+        
+        
+        #return np.corrcoef(softmax(x1), softmax(x2))[0, 1]
+        #return np.corrcoef(x1, x2)[0, 1]
+        x1 = self.scaler.fit_transform(x1.reshape(-1, 1))
+        x2 = self.scaler.fit_transform(x2.reshape(-1, 1))
+        return np.corrcoef(x1.flatten(), x2.flatten())[0, 1]
+        #A= [0.4, 0.6]
+        #SoftA = []
+
 
     def calc_similarity(
         self,
