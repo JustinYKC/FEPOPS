@@ -80,7 +80,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
             smiles
         )
         if not self.parallel:
-            for rdkit_canonical_smiles, mol in canonical_smiles_to_mol_dict.items():
+            for rdkit_canonical_smiles, mol in tqdm(canonical_smiles_to_mol_dict.items(), desc="Generating fepops"):
                 status, fepops_array = self.fepops_object.get_fepops(mol)
                 if status == GetFepopStatusCode.SUCCESS or add_failures_to_database:
                     self.add_fepop(rdkit_canonical_smiles, fepops_array)
