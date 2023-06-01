@@ -119,7 +119,7 @@ class Filter:
                 return mol
 
 class DataPreprocesser:
-    def __init__(self, dataset: Union[Path, str]="/home/justin/pangeAI/develop/benchmark/dud_e/all/aa2ar") -> None:
+    def __init__(self, dataset: Union[Path, str]="/home/justin/pangeAI/develop/benchmark/dud_e/all") -> None:
             self.dataset_path = Path(dataset)
             if not self.dataset_path.exists():
                 raise ValueError(f"Dataset {self.dataset_path} not found")
@@ -179,7 +179,7 @@ class DataPreprocesser:
     def create_tsv(
         self,
         tsv_path: Path, 
-        target_text_for_active_and_inactive: dict={"Active":"actives_final.ism", "Inactive": "actives_final.sdf"},
+        target_text_for_active_and_inactive: dict={"Active":"actives_final.ism", "Inactive": "decoys_final.ism"},
         seperator: str=" ",
         smiles_col_num: int=0,
         ):
