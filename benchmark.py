@@ -118,6 +118,86 @@ class Filter:
             else:
                 return mol
 
+class DataPreprocesser:
+    def __init__(self, dataset: Union[Path, str]="/home/justin/pangeAI/develop/benchmark/dud_e/all/aa2ar") -> None:
+            self.dataset_path = Path(dataset)
+            if not self.dataset_path.exists():
+                raise ValueError(f"Dataset {self.dataset_path} not found")
+
+    def _find_current_dir(
+        self, 
+        target_text: str, 
+        dir_or_file: str='file', 
+        current_path: Path=Path(os.getcwd())
+        ) -> list:
+        """Find a desired directory or a file
+
+        Private method used to find a desired directory or a file with a name of target texts recursively on a given path.
+
+        Parameters
+        ----------
+        target_text : str
+            A given text included in any file names.
+        dir_or_file : str
+            Specify a directory or a file to be found. By default 'file'.
+        current_path : pathlib.Path   
+            The path object indicating a start point for searching. By default current working directory.
+
+        Returns
+        -------
+        list
+            A list containing path objects of found files or directories. 
+
+        """
+        if dir_or_file == 'dir':
+            return [item for item in current_path.rglob(target_text) if item.is_dir()]
+        elif dir_or_file == 'file':
+            return [item for item in current_path.rglob(target_text) if item.is_file()]
+        else:
+            print ("Please choose 'dir' or 'file'")
+    
+    def _get_mol_df_from_files(
+        self, 
+        file_path: Path, 
+        smiles_col_num: int=0, 
+        seperator: str=" ", 
+        is_active: bool=True
+        ) -> pd.DataFrame:
+        with open(file_path, 'r') as input_smiles_file:
+            if file_path.suffix == ".ism":
+                df = pd.DataFrame.from_records(
+                    [(line.split(seperator)[smiles_col_num], is_active) for line in input_smiles_file.readlines() if line.strip()], 
+                    columns=["SMILES", "Active"]
+                )
+                PandasTools.AddMoleculeColumnToFrame(df, smilesCol="SMILES", molCol="Mol")
+                return df
+            elif file_path.suffix == ".sdf":
+                return PandasTools.LoadSDF(str(file_path), smilesName="SMILES", molColName="Mol", idName='ID').drop(columns="ID").assign(Active=is_active)
+            else: 
+                raise ValueError(f"File found not a SDF or SMILES: {file_path}")
+    
+    def create_tsv(
+        self,
+        tsv_path: Path, 
+        target_text_for_active_and_inactive: dict={"Active":"actives_final.ism", "Inactive": "actives_final.sdf"},
+        seperator: str=" ",
+        smiles_col_num: int=0,
+        ):
+        df = pd.DataFrame(columns=["SMILES", "Active", "Mol"])
+        for k, v in target_text_for_active_and_inactive.items():
+            for path in self._find_current_dir(v, "file", self.dataset_path):
+                df = pd.concat([df, self._get_mol_df_from_files(path, smiles_col_num, seperator, k == "Active")],
+                               ignore_index=True, sort=False
+                               )    
+        df = df.loc[~df["Mol"].isna()]
+
+        filter = Filter()
+        df["Mol"] = df.Mol.apply(filter)
+        df = df.loc[~df["Mol"].isna()]
+        
+        df["SMILES"] = df.Mol.apply(lambda x:Chem.CanonSmiles(Chem.MolToSmiles(x)))
+        df.to_csv(Path(tsv_path), columns=["SMILES", "Active"], sep="\t", index=False, header=True)
+
 class ROCScorer:
     def __init__(self, methods: list[SimilarityMethod]) -> None:
         self.similarity_methods = methods
@@ -156,7 +236,6 @@ class ROCScorer:
                 for m, rs in zip(self.similarity_methods, roc_scores)
             ]
         return scores_dict
-
 
 class FepopsBenchmarker:
     def __init__(self, database_file: str = "benchmark.db"):
@@ -285,4 +364,5 @@ class FepopsBenchmarker:
 
 
 if __name__ == "__main__":
-    fire.Fire(FepopsBenchmarker)
+    #fire.Fire(FepopsBenchmarker)
+    fire.Fire(DataPreprocesser)
