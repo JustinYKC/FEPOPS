@@ -2,9 +2,9 @@ import bz2
 import sqlite3
 from pathlib import Path
 from typing import Union
-
+from rdkit import Chem
 import numpy as np
-
+from fepops.fepops import GetFepopStatusCode
 from .fepops_persistent_abc import FepopsPersistentAbstractBaseClass
 
 
@@ -89,23 +89,51 @@ class FepopsDBSqlite(FepopsPersistentAbstractBaseClass):
             return False
         return True
 
-    def get_fepop(self, smiles, is_canonical=False) -> Union[np.ndarray, None]:
-        super().get_fepop(smiles=smiles)
-        rdkit_canonical_smiles, mol = self._get_can_smi_mol_tuple(
-            smiles, is_canonical=is_canonical
-        )
+    def get_fepops(self, smiles, is_canonical=False) -> Union[np.ndarray, None]:
+        super().get_fepops(smiles=smiles)
+
+        if isinstance(smiles, str):
+            if is_canonical:
+                rdkit_canonical_smiles=smiles
+                mol=None
+            else:
+                rdkit_canonical_smiles, mol = self._get_can_smi_mol_tuple(
+                smiles, is_canonical=is_canonical
+            )
+        elif isinstance(smiles, Chem.rdchem.Mol):
+            mol = smiles
+            rdkit_canonical_smiles = Chem.MolToSmiles(mol)
+        else:
+            # At this point is is guaranteed to be np.ndarray (type checking
+            # performed by super), so just return the array (smiles) and
+            # success.
+            return GetFepopStatusCode.SUCCESS, smiles
+
         if self.fepop_exists(rdkit_canonical_smiles):
             res = self.cur.execute(
                 f"""SELECT fepops FROM fepops_lookup_table where cansmi="{rdkit_canonical_smiles}" """
             )
             fepop = res.fetchone()[0]
             if np.isnan(fepop).any():
-                return None
+                return GetFepopStatusCode.FAILED_RETRIEVED_NONE, None
             else:
-                return fepop.reshape(self.fepops_object.num_fepops_per_mol, -1)
+                return GetFepopStatusCode.SUCCESS, fepop.reshape(
+                    -1,
+                    (
+                        self.fepops_object.num_centroids_per_fepop
+                        * self.fepops_object.num_features_per_fepop
+                    )
+                    + self.fepops_object.num_distances_per_fepop,
+                )
         else:
-            fepops_descriptors = self.fepops_object.get_fepops(mol)
-            self.add_fepop(
-                rdkit_canonical_smiles=rdkit_canonical_smiles, fepops=fepops_descriptors
-            )
-            return fepops_descriptors
+            if mol is None:
+                mol=rdkit_canonical_smiles
+            status, fepops_descriptors = self.fepops_object.get_fepops(mol)
+            if status == GetFepopStatusCode.SUCCESS:
+                self.add_fepop(
+                    rdkit_canonical_smiles=rdkit_canonical_smiles,
+                    fepops=fepops_descriptors,
+                )
+                return status, fepops_descriptors
+            else:
+                return status, None

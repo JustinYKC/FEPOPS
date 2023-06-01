@@ -5,13 +5,21 @@ from rdkit.Chem import Crippen, Lipinski
 from rdkit.Chem import rdMolTransforms
 from sklearn.cluster import KMeans as _SKLearnKMeans
 from fast_pytorch_kmeans import KMeans as _FastPTKMeans
-from sklearn.preprocessing import StandardScaler
 from scipy.spatial.distance import cdist, squareform, pdist
 from scipy.special import softmax
 import numpy as np
+from tqdm import tqdm
 import itertools, zlib
 import torch
-from typing import Union, Optional
+from typing import Union, Optional, Tuple
+from enum import Enum
+import multiprocessing as mp
+from multiprocessing import SimpleQueue
+
+GetFepopStatusCode = Enum(
+    "GetFepopStatusCode",
+    ["SUCCESS", "FAILED_TO_GENERATE", "FAILED_TO_RETRIEVE", "FAILED_RETRIEVED_NONE"],
+)
 
 
 class Fepops:
@@ -36,23 +44,24 @@ class Fepops:
     """
 
     def __init__(
-            self,
-            kmeans_method: str = "pytorch-cpu",
-            max_tautomers:Optional[int] = None,
-            *,
-            num_fepops_per_mol:int = 7,
-            num_centroids_per_fepop:int = 4,
-            ):
-
-        self.num_fepops_per_mol = num_fepops_per_mol
-        self.num_centroids_per_fepop = num_centroids_per_fepop
+        self,
+        kmeans_method: str = "pytorch-cpu",
+        max_tautomers: Optional[int] = None,
+        *,
+        num_fepops_per_mol: int = 7,
+        num_centroids_per_fepop: int = 4,
+    ):
         self.implemented_kmeans_methods = ["sklearn", "pytorch-cpu", "pytorch-gpu"]
         self.sort_by_features_col_index_dict = {
-            "charge": 0,
-            "logP": 1,
-            "hba": 2,
-            "hbd": 3,
+            name: sort_order_index
+            for sort_order_index, name in enumerate(["charge", "logP", "hba", "hbd"])
         }
+        self.num_fepops_per_mol = num_fepops_per_mol
+        self.num_centroids_per_fepop = num_centroids_per_fepop
+        self.num_features_per_fepop = len(self.sort_by_features_col_index_dict)
+        self.num_distances_per_fepop = (
+            (self.num_centroids_per_fepop**2) - self.num_centroids_per_fepop
+        ) // 2
         self.donor_mol_from_smarts = Chem.MolFromSmarts("[!H0;#7,#8,#9]")
         self.acceptor_mol_from_smarts = Chem.MolFromSmarts(
             "[!$([#6,F,Cl,Br,I,o,s,nX3,#7v5,#15v5,#16v4,#16v6,*+1,*+2,*+3])]"
@@ -65,16 +74,17 @@ class Fepops:
                 f"Supplied argument kmeans_method '{kmeans_method}' not found, please supply a string denoting an implemented kmeans method from {self.implemented_kmeans_methods}"
             )
         self.kmeans_method_str = kmeans_method
-        self.tautomer_enumerator = MolStandardize.tautomer.TautomerEnumerator(**{'max_tautomers':max_tautomers} if max_tautomers is not None else {})
-        self.scaler = StandardScaler()
+        self.tautomer_enumerator = MolStandardize.tautomer.TautomerEnumerator(
+            **{"max_tautomers": max_tautomers} if max_tautomers is not None else {}
+        )
 
     def _get_k_medoids(
         self, input_x: np.ndarray, k: int = 7, seed: int = 42
     ) -> np.ndarray:
-        """Select k Fopops conformers to generate the final Fepops descriptors
+        """Select k Fepops from conformers
 
-        A private method used to perform k-medoids in order to derive the final Fepops descriptors
-        by selecting k representative Fepops conformers.
+        Gets k mediods from conformers (and conformers of tautomers) which
+        are representative of the molcule.
 
         Parameters
         ----------
@@ -112,10 +122,9 @@ class Fepops:
                     chosen_x_point = np_rng.choice(np.arange(input_x.shape[0]))
                     medoids[i] = input_x[chosen_x_point, :]
                     point_to_centroid_map[chosen_x_point] = i
-                medoids[i] = np.median(
-                    input_x[point_to_centroid_map == i], axis=0
-                )  # Using median to ensure the minimum distance to its medoid_members to be returned
-        # Return medoids sorted by the first column (charge), second to last, then 3rd first etc.
+                medoids[i] = np.median(input_x[point_to_centroid_map == i], axis=0)
+        # Sorting at this stage for reproducibility with existing pregenerated
+        # descriptor sets.
         return medoids[np.lexsort(medoids.T[::-1])]
 
     def annotate_atom_idx(self, mol: Chem.rdchem.Mol):
@@ -258,13 +267,9 @@ class Fepops:
             )
         return centroid_coors, instance_cluster_labels
 
-    def _sort_kmeans_centroid(
-        self, pharmacophore_features_arr: np.ndarray, sort_by_features: str = "charge"
+    def _get_centroid_distances(
+        self, centroid_coords_or_distmat: np.ndarray, is_distance_matrix: bool
     ) -> np.ndarray:
-        sort_index = self.sort_by_features_col_index_dict[sort_by_features]
-        return pharmacophore_features_arr[:, sort_index].argsort()
-
-    def _get_centroid_distances(self, centroid_coords_or_distmat: np.ndarray, is_distance_matrix:bool) -> np.ndarray:
         """Get centroid distances array
 
         In the fepops paper using 4 centroids, there is a specific order in
@@ -285,12 +290,11 @@ class Fepops:
         np.ndarray
             Ordered centroid distances
         """
-
-        if is_distance_matrix:
-            distance_matrix = centroid_coords_or_distmat
+        if not is_distance_matrix:
+            dmat = squareform(pdist(centroid_coords_or_distmat))
         else:
-            distance_matrix = squareform(pdist(centroid_coords_or_distmat))
-        distances = np.array([distance_matrix[0,distance_matrix.shape[0]-1]]+[ele for arr in [distance_matrix.diagonal(i) for i in range(1,distance_matrix.shape[0]-1)] for ele in arr])
+            dmat = centroid_coords_or_distmat.copy()
+        distances = np.hstack([dmat[0,-1]]+[np.diagonal(dmat, offset=k) for k in range(1, dmat.shape[0]-1)])
         return distances
 
     def _mol_from_smiles(self, smiles_string: str) -> Chem.rdchem.Mol:
@@ -317,11 +321,8 @@ class Fepops:
             try:
                 mol = Chem.MolFromSmiles(smiles_string, sanitize=False)
             except:
-                pass
-        if mol is None:
-            raise ValueError(
-                f"Could not parse smiles to a valid molecule, smiles was:{smiles_string}"
-            )
+                f"Could not parse smiles to a valid molecule, smiles was: {smiles_string}"
+                return None
         return mol
 
     def _get_flanking_atoms(
@@ -423,18 +424,18 @@ class Fepops:
         """
         try:
             mol = Chem.AddHs(mol)
-            
+
             params = AllChem.ETKDGv3()
             params.useSmallRingTorsions = True
             params.randomSeed = random_seed
-            original_conformer = mol.GetConformer(
-                AllChem.EmbedMolecule(mol, params)
-            )
+            original_conformer = mol.GetConformer(AllChem.EmbedMolecule(mol, params))
         except ValueError:
             params = AllChem.ETKDGv2()
             id = AllChem.EmbedMolecule(mol, params)
             if id == -1:
-                print("Coords could not be generated without using random coords. using random coords now")
+                print(
+                    "Coords could not be generated without using random coords. using random coords now"
+                )
                 params.useRandomCoords = True
             try:
                 original_conformer = mol.GetConformer(
@@ -518,8 +519,8 @@ class Fepops:
         """
         centroid_coords, instance_cluster_labels = self._perform_kmeans(
             mol.GetConformer(0).GetPositions(),
-            num_centroids = self.num_centroids_per_fepop,
-            kmeans_method = kmeans_method_str,
+            num_centroids=self.num_centroids_per_fepop,
+            kmeans_method=kmeans_method_str,
         )
 
         atomic_logP_dict = self._calculate_atomic_logPs(mol)
@@ -541,29 +542,37 @@ class Fepops:
                 atomic_charge_dict, centroid_atomic_id
             )
 
-            if any(atom_id in hb_acceptors for atom_id in centroid_atomic_id ):
+            if any(atom_id in hb_acceptors for atom_id in centroid_atomic_id):
                 hba = 1
             else:
                 hba = 0
-            if any(atom_id in hb_donors for atom_id in centroid_atomic_id ):
+            if any(atom_id in hb_donors for atom_id in centroid_atomic_id):
                 hbd = 1
             else:
                 hbd = 0
 
-            pharmacophore_features_arr[centroid,:] = sum_of_charge, sum_of_logP, hbd, hba
+            pharmacophore_features_arr[centroid, :] = (
+                sum_of_charge,
+                sum_of_logP,
+                hbd,
+                hba,
+            )
 
-        sorted_index_rank_arr = self._sort_kmeans_centroid(
-            pharmacophore_features_arr, "charge"
-        )
+        sorted_index_rank_arr = np.lexsort(pharmacophore_features_arr.T[::-1])
         centroid_coords = centroid_coords[sorted_index_rank_arr]
         pharmacophore_features_arr = pharmacophore_features_arr[sorted_index_rank_arr]
-        centroid_dist = self._get_centroid_distances(centroid_coords, is_distance_matrix=False)
+
+        centroid_dist = self._get_centroid_distances(
+            centroid_coords, is_distance_matrix=False
+        )
         pharmacophore_features_arr = np.append(
             pharmacophore_features_arr, centroid_dist
         )
         return pharmacophore_features_arr
 
-    def get_fepops(self, mol: Union[str, Chem.rdchem.Mol]) -> Union[np.ndarray, None]:
+    def get_fepops(
+        self, mol: Union[str, None, Chem.rdchem.Mol], is_canonical:bool=False,
+    ) -> Tuple[GetFepopStatusCode, Union[np.ndarray, None]]:
         """Get Fepops descriptors
 
         This method returns Fepops descriptors from a smiles string.
@@ -571,24 +580,37 @@ class Fepops:
 
         Parameters
         ----------
-        smiles_string : str
-            SMILES string of an input molecule.
+        mol : Union[str, None, Chem.rdchem.Mol]
+            Molecule as a SMILES string or RDKit molecule. Can also be None,
+            in which case a failure error status is returned along with None
+            in place of the requested Fepops descriptors.
 
         Returns
         -------
-        np.ndarray
-            A Numpy array containing the calculated Fepops descriptors of an input molecule.
+        Tuple[GetFepopStatusCode, Union[np.ndarray, None]]
+            Returns a tuple, with the first value being a GetFepopStatusCode
+            (enum) denoting SUCCESS or FAILED_TO_GENERATE. The second tuple
+            element is either None (if unsuccessful), or a np.ndarray containing
+            the calculated Fepops descriptors of the requested input molecule.
         """
+        original_smiles = None
+        if isinstance(mol, np.ndarray):
+            return GetFepopStatusCode.SUCCESS, mol
         if isinstance(mol, str):
+            original_smiles = mol
             mol = self._mol_from_smiles(mol)
         if mol is None:
-            return None
-
-        mol = Chem.AddHs(mol)
+            print(
+                f"Failed to make a molecule{' from '+original_smiles if original_smiles is not None else ''}"
+            )
+            return GetFepopStatusCode.FAILED_TO_GENERATE, None
         if Lipinski.HeavyAtomCount(mol) < self.num_centroids_per_fepop:
-            print (f"Number of heavy atoms (:{Lipinski.HeavyAtomCount(mol)}) below requested feature points (:{self.num_centroids_per_fepop})")
-            return None
-        
+            print(
+                f"Number of heavy atoms ({Lipinski.HeavyAtomCount(mol)}) below requested feature points ({self.num_centroids_per_fepop}) for molecule {original_smiles if original_smiles is not None else ''}"
+            )
+            return GetFepopStatusCode.FAILED_TO_GENERATE, None
+        mol = Chem.AddHs(mol)
+
         tautomers_list = self.tautomer_enumerator.enumerate(mol)
         each_mol_with_all_confs_list = []
         for index, t_mol in enumerate(tautomers_list):
@@ -596,19 +618,55 @@ class Fepops:
             each_mol_with_all_confs_list.extend(conf_list)
 
         if each_mol_with_all_confs_list == []:
-            return None
+            print(
+                f"Failed to generate conformers/tautomers {' for '+original_smiles if original_smiles is not None else ''}"
+            )
+            return GetFepopStatusCode.FAILED_TO_GENERATE, None
 
         pharmacophore_feature_all_confs = np.array(
-            [self.get_centroid_pharmacophoric_features(each_mol,
-                          kmeans_method_str = self.kmeans_method_str,
-            )
-            for each_mol in each_mol_with_all_confs_list]
+            [
+                self.get_centroid_pharmacophoric_features(
+                    each_mol,
+                    kmeans_method_str=self.kmeans_method_str,
+                )
+                for each_mol in each_mol_with_all_confs_list
+            ]
         )
 
-        return self._get_k_medoids(pharmacophore_feature_all_confs, self.num_fepops_per_mol)
+        medoids = self._get_k_medoids(
+            pharmacophore_feature_all_confs, self.num_fepops_per_mol
+        )
+        return GetFepopStatusCode.SUCCESS, medoids
+    def _score_scaler(self, x1: np.ndarray, x2: np.ndarray) -> float:
+        """Score function for the similarity calculation
 
+        The score function for the similarity calculation on the FEPOPS descriptors.
 
-    def _score_combialign(self, x1:np.ndarray, x2:np.ndarray):
+        Parameters
+        ----------
+        x1 : np.ndarray
+            A Numpy array containing the FEPOPS descriptors 1.
+        x2 : np.ndarray
+            A Numpy array containing the FEPOPS descriptors 2.
+
+        Returns
+        -------
+        float
+            The FEPOPS similarity score (Pearson correlation).
+        """
+        x1 = self.scaler.fit_transform(x1.reshape(-1, 1))
+        x2 = self.scaler.fit_transform(x2.reshape(-1, 1))
+        return np.corrcoef(x1.flatten(), x2.flatten())[0, 1]
+    
+    def pairwise_correlation(self, A, B):
+        am = A - np.mean(A, axis=0, keepdims=True)
+        bm = B - np.mean(B, axis=0, keepdims=True)
+        return am.T @ bm /  (np.sqrt(
+            np.sum(am**2, axis=0,
+                keepdims=True)).T * np.sqrt(
+            np.sum(bm**2, axis=0, keepdims=True)))
+
+    def _score_combialign(self, x1: np.ndarray, x2: np.ndarray):
         """Score fepops using CombiAlign
 
         Instead of sorting feature points by charge, this algorithm matches 2
@@ -634,44 +692,95 @@ class Fepops:
         -------
         float
             Fepops score, higher is better. 1 is the maximum.
-        """		
-        n_distances = ((self.num_centroids_per_fepop**2)-self.num_centroids_per_fepop)//2
-        x1_desc = x1[:-n_distances].reshape(self.num_centroids_per_fepop,-1)
-        x2_desc, x2_dists = x2[:-n_distances].reshape(self.num_centroids_per_fepop,-1), x2[-n_distances:]
+        """
+        x1_desc = x1[: -self.num_distances_per_fepop].reshape(
+            self.num_centroids_per_fepop, self.num_features_per_fepop
+        )
+        x2_desc = x2[: -self.num_distances_per_fepop].reshape(
+            self.num_centroids_per_fepop, self.num_features_per_fepop
+        )
+        x2_dists = x2[-self.num_distances_per_fepop :]
 
+        permutation_tuples = list(
+            itertools.permutations(range(self.num_centroids_per_fepop))
+        )
 
-        permutation_tuples = list(itertools.permutations(range(self.num_centroids_per_fepop)))
-        # Find permutation which gives highest sum of correlations to x1 descriptor
-        best_permutaion = permutation_tuples[np.argmax([cdist(x1_desc, x2_desc[perm_tuple, :], metric=lambda x,y: np.corrcoef(x,y)[0,1]).diagonal().sum() for perm_tuple in permutation_tuples])]
+        # Vectorised correlation coefficient calculations performed in numpy,
+        # calculating all 24 permutations and the best fit (highest sum
+        # correlation) used as the best fepop ordering of centroids.
+        # This is magnitudes faster than a previous approach taken whereby
+        # numpy corrcoef was run many times and resulted in extremely slow
+        # scoring code. The folowing blog post helped immesely with this
+        # code:
+        # https://waterprogramming.wordpress.com/2014/06/13/numpy-vectorized-correlation-coefficient/
 
+        # Make mega block of fepops for x2, containing all perturbations
+        x2_mega_desc = x2_desc[permutation_tuples]
+        x1_mean = x1_desc.mean(axis=-2)
+        # As all permutations give the same mean (of columns/features),
+        # just do the first.
+        x2_mean = x2_mega_desc[0].mean(axis=-2)
+        x1_residual = x1_desc - x1_mean
+        x2_residual = x2_mega_desc - x2_mean
+        numerator = np.sum(x1_residual * x2_residual, axis=-1)
+        denominator = np.sqrt(
+            np.sum(x1_residual**2, axis=-1)
+            * np.sum((x2_mega_desc - x2_mean) ** 2, axis=-1)
+        )
+        best_permutaion = permutation_tuples[
+            np.argmax(np.sum(numerator / denominator, axis=-1))
+        ]
+        
         # Rebuild x2 distances to squareform matrix, then reorder as per the best permutation and extract in required FEPOPS order.
         dmat = np.zeros((self.num_centroids_per_fepop, self.num_centroids_per_fepop))
-        dmat[0,-1] = x2_dists[0]
-        dmat[-1,0] = x2_dists[0]
-        rows, cols = np.diag_indices_from(dmat)
-        for (r, c), v in zip([(x,y) for d in [np.stack((rows[:-i], cols[i:]), axis=1) for i in range(1, dmat.shape[0]-1)] for x,y in d], x2_dists):
-            dmat[r,c] = v
-            dmat[c,r] = v
 
+        dmat[0, -1]=x2_dists[0]
+        dist_position=1
+        for offset in range(1, self.num_centroids_per_fepop-1):
+            num_in_diagonal=self.num_centroids_per_fepop-offset
+            dmat+=np.diag(x2_dists[dist_position:dist_position+num_in_diagonal], k=offset)
+            dist_position+=num_in_diagonal
+        # Not required, but for completeness, copy upper triangle to lower
+        # triangle of dmat matrix
+        dmat = dmat + dmat.T - np.diag(np.diag(dmat))
+        
         # Reorder the distance matrix using best permutation
+        
         new_dmat = np.zeros_like(dmat)
         for i, p in enumerate(best_permutaion):
             for j in range(dmat.shape[0]):
-                if i == j:continue
-                new_dmat[i,j] = dmat[p,best_permutaion[j]]
-        
+                if i == j:
+                    continue
+                new_dmat[i, j] = dmat[p, best_permutaion[j]]
         distances = self._get_centroid_distances(new_dmat, is_distance_matrix=True)
-        
+
         # Reform x2 with reordered medoids and medoid distances
-        x2 = np.hstack([x2_desc[[best_permutaion]].flatten(),distances])
-        
+        x2 = np.hstack([x2_desc[[best_permutaion]].flatten(), distances])
         # Apply softmax and return pearson correlation between the two
-        return np.corrcoef(softmax(x1), softmax(x2))[0, 1]
+        
+        
+        #return np.corrcoef(softmax(x1), softmax(x2))[0, 1]
+        #return np.corrcoef(x1, x2)[0, 1]
+        #x1 = self.scaler.fit_transform(x1.reshape(-1, 1))
+        #x2 = self.scaler.fit_transform(x2.reshape(-1, 1))
+        return self.pairwise_correlation((x1 - x1.mean())/x1.std(),(x2 - x2.mean())/x2.std())
+        #return np.corrcoef(x1.flatten(), x2.flatten())[0, 1]
+        #A= [0.4, 0.6]
+        #SoftA = []
+
+    def _init_worker_calc_similarity(self,query_descriptors_, candidate_descriptors_):
+        global shared_query_descriptors, shared_candidate_descriptors
+        shared_query_descriptors=query_descriptors_ 
+        shared_candidate_descriptors=candidate_descriptors_
+
+    def _work_calc_similarity(self, candidate_descriptor_i):
+        global shared_query_descriptors, shared_candidate_descriptors
+        return self.calc_similarity(shared_query_descriptors, shared_candidate_descriptors[candidate_descriptor_i])
 
     def calc_similarity(
         self,
         query: Union[np.ndarray, str, None],
-        candidate: Union[np.ndarray, str, None],
+        candidate: Union[np.ndarray, str, None, list[np.ndarray, str, None]],
     ) -> float:
         """Calculate FEPOPS similarity
 
@@ -682,26 +791,39 @@ class Fepops:
         query : Union[np.ndarray, str]
             A Numpy array containing the FEPOPS descriptors of the query molecule
             or a smiles string from which to generate FEPOPS descriptors for the
-            query molecule.
-        candidate : Union[np.ndarray, str]
+            query molecule. Can also be None, in which case, np.nan is returned
+            as a score.
+        candidate : Union[np.ndarray, str, None, list[np.ndarray, str, None]],
             A Numpy array containing the FEPOPS descriptors of the candidate
             molecule or a smiles string from which to generate FEPOPS descriptors
-            for the query molecule.
+            for the candidate molecule.  Can also be None, in which case, np.nan is
+            returned as a score, or a list of any of these. If it is a list,
+            then a list of scores against the single candidate is returned.
 
         Returns
         -------
         float
             Fepops similarity between two molecules
         """
-        if isinstance(query, str):
-            query = self.get_fepops(query)
-        if isinstance(candidate, str):
-            candidate = self.get_fepops(candidate)
-        if any(x is None for x in (query, candidate)):
-            raise ValueError(
-                f"Unable to calculate similarity due to NoneType found in the fepops features:(query, candidate)=({type(query)}, {type(candidate)})"
-            )
+        if not isinstance(query, np.ndarray):
+            query_status, query = self.get_fepops(query)
+            if query_status != GetFepopStatusCode.SUCCESS:
+                return np.nan
+
+        if isinstance(candidate, list):
+            shared_queue = SimpleQueue()
+            scores=[]
+            with mp.Pool(initializer=self._init_worker_calc_similarity, initargs=(query, candidate)) as pool:
+                return pool.map(self._work_calc_similarity,(range(len(candidate))))
+        if not isinstance(candidate, np.ndarray):
+            candidate_status, candidate = self.get_fepops(candidate)
+            if candidate_status != GetFepopStatusCode.SUCCESS:
+                return np.nan
         return np.max(cdist(query, candidate, metric=self._score_combialign))
+
+        
+
+
 
     def __call__(
         self,

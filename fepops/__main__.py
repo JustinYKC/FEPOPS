@@ -1,10 +1,12 @@
+import numpy as np
 import argparse
-from .fepops import Fepops
-from .fepops_persistent import FepopsDBSqlite, FepopsDBJSON
+from .fepops import Fepops, GetFepopStatusCode
+from .fepops_persistent import get_persistent_fepops_storage_object
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate the FEPOPS descriptors")
     subparsers = parser.add_subparsers(
-        dest = "subcmd", help="subcommands", metavar="SUBCOMMAND"
+        dest="subcmd", help="subcommands", metavar="SUBCOMMAND"
     )
     subparsers.required = True
 
@@ -52,7 +54,8 @@ if __name__ == "__main__":
     )
 
     f3_parser = subparsers.add_parser(
-        "save_descriptors", help="Pregenerate FEPOPS descriptors for a set of SMILES strings"
+        "save_descriptors",
+        help="Pregenerate FEPOPS descriptors for a set of SMILES strings",
     )
     f3_parser.add_argument(
         "-ismi",
@@ -69,35 +72,37 @@ if __name__ == "__main__":
         required=True,
     )
 
-    def get_persistent_fepops_storage_object(database_file:str):
-        if args.database_file.endswith((".sqlite", ".sqlite3", ".db", ".db3", ".s3db", ".sl3")):
-            return FepopsDBSqlite(args.database_file)
-        if args.database_file.endswith((".json")):
-            return FepopsDBJSON(args.database_file)
-
     args = parser.parse_args()
     if args.subcmd == "get_fepops":
         if args.database_file is not None:
-            f_persistent = get_persistent_fepops_storage_object(args.database_file)
-            fepops_features = f_persistent.get_fepop(args.insmile)
+            with get_persistent_fepops_storage_object(args.database_file) as f:
+                status, fepops_features = f.get_fepops(args.insmile)
         else:
-            f=Fepops()
-            fepops_features = f.get_fepops(args.insmile)
-        print(fepops_features)
+            f = Fepops()
+            status, fepops_features = f.get_fepops(args.insmile)
+        if status == GetFepopStatusCode.SUCCESS:
+            print(fepops_features)
+        else:
+            print(f"Failed to generate FEPOPS descriptors for {args.insmile}")
 
     if args.subcmd == "calc_sim":
         if args.database_file is not None:
-            with get_persistent_fepops_storage_object(args.database_file) as f_persistent:
-                fepops_features1 = f_persistent.get_fepop(args.insmiles1)
-                fepops_features2 = f_persistent.get_fepop(args.insmiles2)
-                print(f_persistent.calc_similarity(fepops_features1, fepops_features2))
+            with get_persistent_fepops_storage_object(args.database_file) as f:
+                fepops_status1, fepops_features1 = f.get_fepops(args.insmiles1)
+                fepops_status2, fepops_features2 = f.get_fepops(args.insmiles2)
+                if (
+                    fepops_status1 is not GetFepopStatusCode.SUCCESS
+                    or fepops_status2 is not GetFepopStatusCode.SUCCESS
+                ):
+                    print(np.nan)
+                else:
+                    print(f.calc_similarity(fepops_features1, fepops_features2))
         else:
-            f=Fepops()
-            fepops_features_1 = f.get_fepops(args.insmiles1)
-            fepops_features_2 = f.get_fepops(args.insmiles2)
-            print(f.calc_similarity(fepops_features_1, fepops_features_2))
+            f = Fepops()
+            print(f.calc_similarity(args.insmiles1, args.insmiles2))
 
     if args.subcmd == "save_descriptors":
         f_persistent = get_persistent_fepops_storage_object(args.database_file)
         f_persistent.save_descriptors(args.smiles_file)
-      
+        if args.database_file.endswith((".json")):
+            f_persistent.write()
