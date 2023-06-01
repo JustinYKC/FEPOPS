@@ -1,5 +1,6 @@
 import time
 import fire
+import os
 import numpy as np
 from sklearn.datasets import make_classification
 from tqdm import tqdm
@@ -8,10 +9,14 @@ from dataclasses import dataclass
 from typing import Callable, Union
 from pathlib import Path
 import pandas as pd
+from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem import DataStructs
+from rdkit.Chem import PandasTools
+from rdkit.Chem.MolStandardize import rdMolStandardize
 from sklearn.metrics import roc_auc_score
 from fepops.fepops_persistent import get_persistent_fepops_storage_object
+from typing import Union, Optional
 
 
 @dataclass
@@ -19,6 +24,99 @@ class SimilarityMethod:
     name: str
     score: Callable
 
+class Filter:
+    def __init__(self, min_atoms:int=4) -> None:
+        self.min_atoms = min_atoms
+        self.lfc = rdMolStandardize.LargestFragmentChooser()
+
+    def _remove_salt(self, mol: Chem.rdchem.Mol) -> Union[Chem.rdchem.Mol, None]:
+        """Romve salts or ions from molecules
+
+        Remove salts or ions from molecules
+
+        Parameters
+        ----------
+        mol : Chem.rdchem.Mol
+        The Rdkit mol object of the input molecule.
+
+        Returns
+        -------
+        Chem.rdchem.Mol or None
+        Return a Rdkit mol object if the input molecule meets the criterion, otherwise return None.    
+        """
+        try:
+            cleaned_molecule = rdMolStandardize.Cleanup(mol)
+            smiles = Chem.MolToSmiles(cleaned_molecule)
+            if "." in smiles:
+                cleaned_molecule = rdMolStandardize.Cleanup(self.lfc.choose(cleaned_molecule))
+        except: 
+            return None
+        return cleaned_molecule
+    
+    def _filter_by_atom_num(self, mol: Chem.rdchem.Mol) -> Union[Chem.rdchem.Mol, None]:
+        """Filter molecules by number of atoms
+    
+        Filter out molecules by the number of atoms.
+
+        Parameters
+        ----------
+        mol : Chem.rdchem.Mol
+        The Rdkit mol object of the input molecule.
+        cutoff : int
+        The criterion of atom numbers for filtering. By default 4.
+
+        Returns
+        -------
+        Chem.rdchem.Mol or None
+        Return a Rdkit mol object if the input molecule meets the criterion, otherwise return None.
+        """
+        atom_num = mol.GetNumAtoms()
+        if atom_num > self.min_atoms: 
+            return mol
+        else: 
+            return None
+        
+    def __call__(self, mol: Chem.rdchem.Mol) -> Union[Chem.rdchem.Mol, None]:
+        """Apply all filters
+
+        Parameters
+        ----------
+        mol : Chem.rdchem.Mol
+        The Rdkit mol object of the input molecule.
+   
+        Returns
+        -------
+        filter_result
+        Return a Rdkit mol object if the input molecule meets all criteria, otherwise return None. 
+        """
+        filter_result = self.filter_mol(mol)
+        return filter_result
+    
+    def filter_mol(self, mol: Chem.rdchem.Mol) -> Union[Chem.rdchem.Mol, None]:
+        """Apply all filters
+
+        Perform two filters (minimum number of atoms, and salt/ion) in sequence 
+        to obtain the final molecules as required.
+
+        Parameters
+        ----------
+        mol : Chem.rdchem.Mol
+        The Rdkit mol object of the input molecule.
+   
+        Returns
+        -------
+        Chem.rdchem.Mol or None
+        Return a Rdkit mol object if the input molecule meets all criteria, otherwise return None.       
+        """
+        mol = self._remove_salt(mol)
+        if mol is None: 
+            return None
+        else: 
+            mol = self._filter_by_atom_num(mol)
+            if mol is None: 
+                return None
+            else:
+                return mol
 
 class ROCScorer:
     def __init__(self, methods: list[SimilarityMethod]) -> None:
