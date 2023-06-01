@@ -116,7 +116,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
             raise ValueError(f"Expected a fepop, but a {type(fepops)} was passed")
 
     @abstractmethod
-    def get_fepops(self, smiles: Union[str, Chem.rdchem.Mol, np.ndarray]) -> None:
+    def get_fepops(self, smiles: Union[str, Chem.rdchem.Mol, np.ndarray], is_canonical:bool=True) -> None:
         if not isinstance(smiles, (str, Chem.rdchem.Mol, np.ndarray)):
             raise ValueError(
                 f"Expected an rdkit canonical smiles string, rdkit mol, or a numpy array of descriptors but a {type(smiles)} was passed"
@@ -192,6 +192,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
         self,
         fepops_features_1: Union[np.ndarray, str, None],
         fepops_features_2: Union[np.ndarray, str, None],
+        is_canonical=True,
     ):
         """Calculate FEPOPS similarity
 
@@ -199,27 +200,38 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
 
         Parameters
         ----------
-        fepops_features_1 : Union[np.ndarray, str]
-                A Numpy array containing the FEPOPS descriptors of the query molecule
-                or a smiles string from which to generate FEPOPS descriptors for the
-                query molecule.
-        fepops_features_2 : Union[np.ndarray, str]
-                A Numpy array containing the FEPOPS descriptors of the candidate
-                molecule or a smiles string from which to generate FEPOPS descriptors
-                for the query molecule.
+        fepops_features_1 : Union[np.ndarray, str, None]
+            A Numpy array containing the FEPOPS descriptors of the query molecule
+            or a smiles string from which to generate FEPOPS descriptors for the
+            query molecule.
+        fepops_features_2 : Union[np.ndarray, str, None, list[np.ndarray, str, None]]
+            A Numpy array containing the FEPOPS descriptors of the candidate
+            molecule or a smiles string from which to generate FEPOPS descriptors
+            for the candidate molecule.  Can also be None, in which case, np.nan is
+            returned as a score, or a list of any of these. If it is a list,
+            then a list of scores against the single candidate is returned.
 
         Returns
         -------
         float
                 Fepops similarity between two molecules
         """
-
+        if fepops_features_1 is None:
+            return np.nan
         if isinstance(fepops_features_1, (str, Chem.rdchem.Mol)):
-            status, fepops_features_1 = self.get_fepops(fepops_features_1)
+            status, fepops_features_1 = self.get_fepops(fepops_features_1, is_canonical=is_canonical)
             if status != GetFepopStatusCode.SUCCESS:
                 return np.nan
+        
+        if isinstance(fepops_features_2, list):
+            new_fepops_features_2=[]
+            for item in fepops_features_2:
+                status, fpop = self.get_fepops(item, is_canonical=is_canonical)
+                new_fepops_features_2.append(fpop if status == GetFepopStatusCode.SUCCESS else None)
+            return self.fepops_object.calc_similarity(fepops_features_1, new_fepops_features_2)
+
         if isinstance(fepops_features_2, (str, Chem.rdchem.Mol)):
-            status, fepops_features_2 = self.get_fepops(fepops_features_2)
+            status, fepops_features_2 = self.get_fepops(fepops_features_2, is_canonical=is_canonical)
             if status != GetFepopStatusCode.SUCCESS:
                 return np.nan
         if any(x is None for x in (fepops_features_1, fepops_features_2)):

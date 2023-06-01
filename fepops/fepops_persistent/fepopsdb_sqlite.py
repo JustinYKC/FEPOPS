@@ -93,7 +93,11 @@ class FepopsDBSqlite(FepopsPersistentAbstractBaseClass):
         super().get_fepops(smiles=smiles)
 
         if isinstance(smiles, str):
-            rdkit_canonical_smiles, mol = self._get_can_smi_mol_tuple(
+            if is_canonical:
+                rdkit_canonical_smiles=smiles
+                mol=None
+            else:
+                rdkit_canonical_smiles, mol = self._get_can_smi_mol_tuple(
                 smiles, is_canonical=is_canonical
             )
         elif isinstance(smiles, Chem.rdchem.Mol):
@@ -122,6 +126,8 @@ class FepopsDBSqlite(FepopsPersistentAbstractBaseClass):
                     + self.fepops_object.num_distances_per_fepop,
                 )
         else:
+            if mol is None:
+                mol=rdkit_canonical_smiles
             status, fepops_descriptors = self.fepops_object.get_fepops(mol)
             if status == GetFepopStatusCode.SUCCESS:
                 self.add_fepop(

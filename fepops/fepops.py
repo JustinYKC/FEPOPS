@@ -5,15 +5,16 @@ from rdkit.Chem import Crippen, Lipinski
 from rdkit.Chem import rdMolTransforms
 from sklearn.cluster import KMeans as _SKLearnKMeans
 from fast_pytorch_kmeans import KMeans as _FastPTKMeans
-from sklearn.preprocessing import StandardScaler
 from scipy.spatial.distance import cdist, squareform, pdist
 from scipy.special import softmax
 import numpy as np
+from tqdm import tqdm
 import itertools, zlib
 import torch
 from typing import Union, Optional, Tuple
 from enum import Enum
-from sklearn.preprocessing import StandardScaler
+import multiprocessing as mp
+from multiprocessing import SimpleQueue
 
 GetFepopStatusCode = Enum(
     "GetFepopStatusCode",
@@ -50,7 +51,6 @@ class Fepops:
         num_fepops_per_mol: int = 7,
         num_centroids_per_fepop: int = 4,
     ):
-        self.scaler=StandardScaler()
         self.implemented_kmeans_methods = ["sklearn", "pytorch-cpu", "pytorch-gpu"]
         self.sort_by_features_col_index_dict = {
             name: sort_order_index
@@ -77,7 +77,6 @@ class Fepops:
         self.tautomer_enumerator = MolStandardize.tautomer.TautomerEnumerator(
             **{"max_tautomers": max_tautomers} if max_tautomers is not None else {}
         )
-        self.scaler = StandardScaler()
 
     def _get_k_medoids(
         self, input_x: np.ndarray, k: int = 7, seed: int = 42
@@ -322,11 +321,8 @@ class Fepops:
             try:
                 mol = Chem.MolFromSmiles(smiles_string, sanitize=False)
             except:
-                pass
-        if mol is None:
-            print(
                 f"Could not parse smiles to a valid molecule, smiles was: {smiles_string}"
-            )
+                return None
         return mol
 
     def _get_flanking_atoms(
@@ -575,7 +571,7 @@ class Fepops:
         return pharmacophore_features_arr
 
     def get_fepops(
-        self, mol: Union[str, None, Chem.rdchem.Mol]
+        self, mol: Union[str, None, Chem.rdchem.Mol], is_canonical:bool=False,
     ) -> Tuple[GetFepopStatusCode, Union[np.ndarray, None]]:
         """Get Fepops descriptors
 
@@ -661,6 +657,15 @@ class Fepops:
         x1 = self.scaler.fit_transform(x1.reshape(-1, 1))
         x2 = self.scaler.fit_transform(x2.reshape(-1, 1))
         return np.corrcoef(x1.flatten(), x2.flatten())[0, 1]
+    
+    def pairwise_correlation(self, A, B):
+        am = A - np.mean(A, axis=0, keepdims=True)
+        bm = B - np.mean(B, axis=0, keepdims=True)
+        return am.T @ bm /  (np.sqrt(
+            np.sum(am**2, axis=0,
+                keepdims=True)).T * np.sqrt(
+            np.sum(bm**2, axis=0, keepdims=True)))
+
     def _score_combialign(self, x1: np.ndarray, x2: np.ndarray):
         """Score fepops using CombiAlign
 
@@ -754,13 +759,12 @@ class Fepops:
         # Apply softmax and return pearson correlation between the two
         
         
-        
-        
         #return np.corrcoef(softmax(x1), softmax(x2))[0, 1]
         #return np.corrcoef(x1, x2)[0, 1]
-        x1 = self.scaler.fit_transform(x1.reshape(-1, 1))
-        x2 = self.scaler.fit_transform(x2.reshape(-1, 1))
-        return np.corrcoef(x1.flatten(), x2.flatten())[0, 1]
+        #x1 = self.scaler.fit_transform(x1.reshape(-1, 1))
+        #x2 = self.scaler.fit_transform(x2.reshape(-1, 1))
+        return self.pairwise_correlation((x1 - x1.mean())/x1.std(),(x2 - x2.mean())/x2.std())
+        #return np.corrcoef(x1.flatten(), x2.flatten())[0, 1]
         #A= [0.4, 0.6]
         #SoftA = []
 
@@ -768,7 +772,7 @@ class Fepops:
     def calc_similarity(
         self,
         query: Union[np.ndarray, str, None],
-        candidate: Union[np.ndarray, str, None],
+        candidate: Union[np.ndarray, str, None, list[np.ndarray, str, None]],
     ) -> float:
         """Calculate FEPOPS similarity
 
@@ -779,11 +783,14 @@ class Fepops:
         query : Union[np.ndarray, str]
             A Numpy array containing the FEPOPS descriptors of the query molecule
             or a smiles string from which to generate FEPOPS descriptors for the
-            query molecule.
-        candidate : Union[np.ndarray, str]
+            query molecule. Can also be None, in which case, np.nan is returned
+            as a score.
+        candidate : Union[np.ndarray, str, None, list[np.ndarray, str, None]],
             A Numpy array containing the FEPOPS descriptors of the candidate
             molecule or a smiles string from which to generate FEPOPS descriptors
-            for the query molecule.
+            for the candidate molecule.  Can also be None, in which case, np.nan is
+            returned as a score, or a list of any of these. If it is a list,
+            then a list of scores against the single candidate is returned.
 
         Returns
         -------
@@ -794,6 +801,15 @@ class Fepops:
             query_status, query = self.get_fepops(query)
             if query_status != GetFepopStatusCode.SUCCESS:
                 return np.nan
+
+        if isinstance(candidate, list):
+            shared_queue = SimpleQueue()
+            scores=[]
+            with mp.Pool() as pool:
+                _ = pool.map_async(self.calc_similarity, ((query, c) for c in candidate))
+                for i in tqdm(range(len(candidate))):
+                    scores.append(shared_queue.get())
+            return scores
         if not isinstance(candidate, np.ndarray):
             candidate_status, candidate = self.get_fepops(candidate)
             if candidate_status != GetFepopStatusCode.SUCCESS:
