@@ -768,6 +768,14 @@ class Fepops:
         #A= [0.4, 0.6]
         #SoftA = []
 
+    def _init_worker_calc_similarity(self,query_descriptors_, candidate_descriptors_):
+        global shared_query_descriptors, shared_candidate_descriptors
+        shared_query_descriptors=query_descriptors_ 
+        shared_candidate_descriptors=candidate_descriptors_
+
+    def _work_calc_similarity(self, candidate_descriptor_i):
+        global shared_query_descriptors, shared_candidate_descriptors
+        return self.calc_similarity(shared_query_descriptors, shared_candidate_descriptors[candidate_descriptor_i])
 
     def calc_similarity(
         self,
@@ -805,16 +813,17 @@ class Fepops:
         if isinstance(candidate, list):
             shared_queue = SimpleQueue()
             scores=[]
-            with mp.Pool() as pool:
-                _ = pool.map_async(self.calc_similarity, ((query, c) for c in candidate))
-                for i in tqdm(range(len(candidate))):
-                    scores.append(shared_queue.get())
-            return scores
+            with mp.Pool(initializer=self._init_worker_calc_similarity, initargs=(query, candidate)) as pool:
+                return pool.map(self._work_calc_similarity,(range(len(candidate))))
         if not isinstance(candidate, np.ndarray):
             candidate_status, candidate = self.get_fepops(candidate)
             if candidate_status != GetFepopStatusCode.SUCCESS:
                 return np.nan
         return np.max(cdist(query, candidate, metric=self._score_combialign))
+
+        
+
+
 
     def __call__(
         self,

@@ -60,13 +60,12 @@ class ROCScorer:
         scores_dict = {sm.name: [] for sm in self.similarity_methods}
 
         for sm_i, sm in enumerate(self.similarity_methods):
-            for active_i, active in tqdm(
-                enumerate(
+            for active_i, active in enumerate(tqdm(
                     df.query(f"{active_flag_column_title}==1")[
                         smiles_column_title
-                    ].tolist()
-                ),
+                    ].tolist(),
                 desc=f"Assessing active recall (AUROC) for {sm.name}",
+                )
             ):
                 if sm.supports_multiple_candidates:
                     scores = np.array(
@@ -255,7 +254,7 @@ class FepopsBenchmarker:
                 ),
                 SimilarityMethod(
                     "FEPOPS",
-                    False,
+                    True,
                     self.fepops.calc_similarity,
                     lambda x: self.fepops.get_fepops(
                         x, is_canonical=data_tsv_contains_canonical_smiles
