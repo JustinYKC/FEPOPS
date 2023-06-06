@@ -294,7 +294,10 @@ class Fepops:
             dmat = squareform(pdist(centroid_coords_or_distmat))
         else:
             dmat = centroid_coords_or_distmat.copy()
-        distances = np.hstack([dmat[0,-1]]+[np.diagonal(dmat, offset=k) for k in range(1, dmat.shape[0]-1)])
+        distances = np.hstack(
+            [dmat[0, -1]]
+            + [np.diagonal(dmat, offset=k) for k in range(1, dmat.shape[0] - 1)]
+        )
         return distances
 
     def _mol_from_smiles(self, smiles_string: str) -> Chem.rdchem.Mol:
@@ -571,7 +574,9 @@ class Fepops:
         return pharmacophore_features_arr
 
     def get_fepops(
-        self, mol: Union[str, None, Chem.rdchem.Mol], is_canonical:bool=False,
+        self,
+        mol: Union[str, None, Chem.rdchem.Mol],
+        is_canonical: bool = False,
     ) -> Tuple[GetFepopStatusCode, Union[np.ndarray, None]]:
         """Get Fepops descriptors
 
@@ -637,6 +642,7 @@ class Fepops:
             pharmacophore_feature_all_confs, self.num_fepops_per_mol
         )
         return GetFepopStatusCode.SUCCESS, medoids
+
     def _score_scaler(self, x1: np.ndarray, x2: np.ndarray) -> float:
         """Score function for the similarity calculation
 
@@ -657,14 +663,18 @@ class Fepops:
         x1 = self.scaler.fit_transform(x1.reshape(-1, 1))
         x2 = self.scaler.fit_transform(x2.reshape(-1, 1))
         return np.corrcoef(x1.flatten(), x2.flatten())[0, 1]
-    
+
     def pairwise_correlation(self, A, B):
         am = A - np.mean(A, axis=0, keepdims=True)
         bm = B - np.mean(B, axis=0, keepdims=True)
-        return am.T @ bm /  (np.sqrt(
-            np.sum(am**2, axis=0,
-                keepdims=True)).T * np.sqrt(
-            np.sum(bm**2, axis=0, keepdims=True)))
+        return (
+            am.T
+            @ bm
+            / (
+                np.sqrt(np.sum(am**2, axis=0, keepdims=True)).T
+                * np.sqrt(np.sum(bm**2, axis=0, keepdims=True))
+            )
+        )
 
     def _score_combialign(self, x1: np.ndarray, x2: np.ndarray):
         """Score fepops using CombiAlign
@@ -730,22 +740,24 @@ class Fepops:
         best_permutaion = permutation_tuples[
             np.argmax(np.sum(numerator / denominator, axis=-1))
         ]
-        
+
         # Rebuild x2 distances to squareform matrix, then reorder as per the best permutation and extract in required FEPOPS order.
         dmat = np.zeros((self.num_centroids_per_fepop, self.num_centroids_per_fepop))
 
-        dmat[0, -1]=x2_dists[0]
-        dist_position=1
-        for offset in range(1, self.num_centroids_per_fepop-1):
-            num_in_diagonal=self.num_centroids_per_fepop-offset
-            dmat+=np.diag(x2_dists[dist_position:dist_position+num_in_diagonal], k=offset)
-            dist_position+=num_in_diagonal
+        dmat[0, -1] = x2_dists[0]
+        dist_position = 1
+        for offset in range(1, self.num_centroids_per_fepop - 1):
+            num_in_diagonal = self.num_centroids_per_fepop - offset
+            dmat += np.diag(
+                x2_dists[dist_position : dist_position + num_in_diagonal], k=offset
+            )
+            dist_position += num_in_diagonal
         # Not required, but for completeness, copy upper triangle to lower
         # triangle of dmat matrix
         dmat = dmat + dmat.T - np.diag(np.diag(dmat))
-        
+
         # Reorder the distance matrix using best permutation
-        
+
         new_dmat = np.zeros_like(dmat)
         for i, p in enumerate(best_permutaion):
             for j in range(dmat.shape[0]):
@@ -757,25 +769,29 @@ class Fepops:
         # Reform x2 with reordered medoids and medoid distances
         x2 = np.hstack([x2_desc[[best_permutaion]].flatten(), distances])
         # Apply softmax and return pearson correlation between the two
-        
-        
-        #return np.corrcoef(softmax(x1), softmax(x2))[0, 1]
-        #return np.corrcoef(x1, x2)[0, 1]
-        #x1 = self.scaler.fit_transform(x1.reshape(-1, 1))
-        #x2 = self.scaler.fit_transform(x2.reshape(-1, 1))
-        return self.pairwise_correlation((x1 - x1.mean())/x1.std(),(x2 - x2.mean())/x2.std())
-        #return np.corrcoef(x1.flatten(), x2.flatten())[0, 1]
-        #A= [0.4, 0.6]
-        #SoftA = []
 
-    def _init_worker_calc_similarity(self,query_descriptors_, candidate_descriptors_):
+        # return np.corrcoef(softmax(x1), softmax(x2))[0, 1]
+        # return np.corrcoef(x1, x2)[0, 1]
+        # x1 = self.scaler.fit_transform(x1.reshape(-1, 1))
+        # x2 = self.scaler.fit_transform(x2.reshape(-1, 1))
+        return self.pairwise_correlation(
+            (x1 - x1.mean()) / x1.std(), (x2 - x2.mean()) / x2.std()
+        )
+        # return np.corrcoef(x1.flatten(), x2.flatten())[0, 1]
+        # A= [0.4, 0.6]
+        # SoftA = []
+
+    def _init_worker_calc_similarity(self, query_descriptors_, candidate_descriptors_):
         global shared_query_descriptors, shared_candidate_descriptors
-        shared_query_descriptors=query_descriptors_ 
-        shared_candidate_descriptors=candidate_descriptors_
+        shared_query_descriptors = query_descriptors_
+        shared_candidate_descriptors = candidate_descriptors_
 
     def _work_calc_similarity(self, candidate_descriptor_i):
         global shared_query_descriptors, shared_candidate_descriptors
-        return self.calc_similarity(shared_query_descriptors, shared_candidate_descriptors[candidate_descriptor_i])
+        return self.calc_similarity(
+            shared_query_descriptors,
+            shared_candidate_descriptors[candidate_descriptor_i],
+        )
 
     def calc_similarity(
         self,
@@ -812,18 +828,17 @@ class Fepops:
 
         if isinstance(candidate, list):
             shared_queue = SimpleQueue()
-            scores=[]
-            with mp.Pool(initializer=self._init_worker_calc_similarity, initargs=(query, candidate)) as pool:
-                return pool.map(self._work_calc_similarity,(range(len(candidate))))
+            scores = []
+            with mp.Pool(
+                initializer=self._init_worker_calc_similarity,
+                initargs=(query, candidate),
+            ) as pool:
+                return pool.imap(self._work_calc_similarity, (range(len(candidate))))
         if not isinstance(candidate, np.ndarray):
             candidate_status, candidate = self.get_fepops(candidate)
             if candidate_status != GetFepopStatusCode.SUCCESS:
                 return np.nan
         return np.max(cdist(query, candidate, metric=self._score_combialign))
-
-        
-
-
 
     def __call__(
         self,
