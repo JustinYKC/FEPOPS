@@ -43,29 +43,52 @@ class ROCScorer:
             raise ValueError(
                 f"Could not find a '{smiles_column_title}' column in the DataFrame. Consider passing a column title to the 'active_flag_column_title' argument to get_auroc_scores"
             )
-        
-        all_smiles=df[smiles_column_title].tolist()
-        descriptors = [
-            [
-                sm.descriptor_calc_func(smiles)
-                for smiles in tqdm(
-                    all_smiles,
-                    desc=f"Caching descriptors for {sm.name}",
-                )
-            ]
-            for sm in self.similarity_methods
-        ]
 
-        labels = np.array(df[active_flag_column_title].tolist(), dtype=int)
+        smiles_list = df[smiles_column_title].tolist()
+        labels_list = df[active_flag_column_title].tolist()
+        descriptors = []
+        for sm in self.similarity_methods:
+            descriptors.append([])
+            for smiles in tqdm(smiles_list, desc=f"Caching descriptors for {sm.name}"):
+                res = sm.descriptor_calc_func(smiles)
+                if isinstance(res, tuple):
+                    descriptors[-1].append(res[-1])
+                else:
+                    descriptors[-1].append(res)
+
+        problematic_molecule_ilocs = []
+        assert (
+            len(set([len(d) for d in descriptors])) == 1
+        ), "Generation of descriptors yielded different lengths, something went very wrong"
+        for j in range(len(descriptors[0])):
+            vals = [descriptors[i][j] is not None for i in range(len(descriptors))]
+            if not all(vals):
+                problematic_molecule_ilocs.append(j)
+        problematic_molecule_smiles = df.iloc[problematic_molecule_ilocs][
+            smiles_column_title
+        ].tolist()
+        if len(problematic_molecule_smiles) > 0:
+            print('─' * 80)
+            print("Warning")
+            print(
+                "Problematic molecules for which no descriptors could be retrieved were found. "
+            )
+            print("The following molecules will not be included in AUROC calculations:")
+            for pm in problematic_molecule_smiles:
+                print(pm)
+            print('─' * 80)
+            problematic_molecule_ilocs.sort(reverse=True)
+            for pmi in problematic_molecule_ilocs:
+                del labels_list[pmi]
+                for d_i in range(len(descriptors)):
+                    del descriptors[d_i][pmi]
+
+        labels = np.array(labels_list, dtype=int)
         scores_dict = {sm.name: [] for sm in self.similarity_methods}
-
         for sm_i, sm in enumerate(self.similarity_methods):
-            for active_i, active in enumerate(tqdm(
-                    df.query(f"{active_flag_column_title}==1")[
-                        smiles_column_title
-                    ].tolist(),
+            for active_i in tqdm(
+                np.argwhere(np.array(labels_list) == 1).flatten(),
                 desc=f"Assessing active recall (AUROC) for {sm.name}",
-                )
             ):
                 if sm.supports_multiple_candidates:
                     scores = np.array(
@@ -75,7 +98,12 @@ class ROCScorer:
                     )
                 else:
                     scores = np.array(
-                        [sm.descriptor_score_func(descriptors[sm_i][active_i], descriptors[sm_i][smiles_i]) for smiles_i in range(len(all_smiles))]
+                        [
+                            sm.descriptor_score_func(
+                                descriptors[sm_i][active_i], descriptors[sm_i][smiles_i]
+                            )
+                            for smiles_i in range(len(descriptors[0]))
+                        ]
                     )
                 scores_dict[sm.name].append(
                     roc_auc_score(
@@ -258,7 +286,7 @@ class FepopsBenchmarker:
                     self.fepops.calc_similarity,
                     lambda x: self.fepops.get_fepops(
                         x, is_canonical=data_tsv_contains_canonical_smiles
-                    )[1],
+                    ),
                     self.fepops.calc_similarity,
                 ),
             ]
