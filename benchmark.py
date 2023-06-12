@@ -264,8 +264,8 @@ class FepopsBenchmarker:
         self,
         data_tsv: Union[Path, str],
         data_tsv_contains_canonical_smiles: bool = True,
-        smiles_column_title: str = "Std_SMILES",
-        active_flag_column_title: str = "Activity",
+        smiles_column_title: str = "SMILES",
+        active_flag_column_title: str = "Active",
     ):
         roc_scorer = ROCScorer(
             [
