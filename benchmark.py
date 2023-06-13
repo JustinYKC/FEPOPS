@@ -94,7 +94,7 @@ class ROCScorer:
                     scores = np.array(
                         sm.descriptor_score_func(
                             descriptors[sm_i][active_i], descriptors[sm_i]
-                        )
+                        ), dtype=float
                     )
                 else:
                     scores = np.array(
@@ -103,8 +103,8 @@ class ROCScorer:
                                 descriptors[sm_i][active_i], descriptors[sm_i][smiles_i]
                             )
                             for smiles_i in range(len(descriptors[0]))
-                        ]
-                    )
+                        ],
+                    dtype=float)
                 scores_dict[sm.name].append(
                     roc_auc_score(
                         labels[np.argwhere(~np.isnan(scores))],
