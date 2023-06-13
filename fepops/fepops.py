@@ -833,7 +833,8 @@ class Fepops:
                 initializer=self._init_worker_calc_similarity,
                 initargs=(query, candidate),
             ) as pool:
-                return pool.imap(self._work_calc_similarity, (range(len(candidate))))
+                parallel_results=list(pool.imap(self._work_calc_similarity, (range(len(candidate)))))
+            return parallel_results
         if not isinstance(candidate, np.ndarray):
             candidate_status, candidate = self.get_fepops(candidate)
             if candidate_status != GetFepopStatusCode.SUCCESS:
