@@ -113,7 +113,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
             ):
                 cansmi_fepops_tuples.append(res)
 
-            for rdkit_canonical_smiles, status, new_fepop in cansmi_fepops_tuples:
+            for rdkit_canonical_smiles, (status, new_fepop) in cansmi_fepops_tuples:
                 if status == GetFepopStatusCode.SUCCESS or add_failures_to_database:
                     self.add_fepop(rdkit_canonical_smiles, new_fepop)
             print(
