@@ -222,10 +222,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
         self,
         fepops_features_1: Union[np.ndarray, str, None],
         fepops_features_2: Union[np.ndarray, str, None],
-<<<<<<< HEAD
-=======
         is_canonical=True,
->>>>>>> e47d6a91a7d51dff039c4364913038c8a10e5204
     ):
         """Calculate FEPOPS similarity
 
