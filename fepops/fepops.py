@@ -165,7 +165,7 @@ class Fepops:
         dict
             A dictionary containing all atom symobls with their charges.
         """
-        Chem.rdPartialCharges.ComputeGasteigerCharges(mol)
+        Chem.rdPartialCharges.ComputeGasteigerCharges(mol, throwOnParamFailure=True)
         return {
             atom.GetIdx(): float(atom.GetProp("_GasteigerCharge"))
             for atom in mol.GetAtoms()
@@ -537,7 +537,6 @@ class Fepops:
         pharmacophore_features_arr = np.empty(shape=[self.num_centroids_per_fepop, 4])
         for centroid in range(self.num_centroids_per_fepop):
             centroid_atomic_id = np.where(instance_cluster_labels == centroid)[0]
-
             sum_of_logP = self._sum_of_atomic_features_by_centroids(
                 atomic_logP_dict, centroid_atomic_id
             )
@@ -621,22 +620,27 @@ class Fepops:
         for index, t_mol in enumerate(tautomers_list):
             conf_list = self.generate_conformers(t_mol)
             each_mol_with_all_confs_list.extend(conf_list)
-
         if each_mol_with_all_confs_list == []:
             print(
                 f"Failed to generate conformers/tautomers {' for '+original_smiles if original_smiles is not None else ''}"
             )
             return GetFepopStatusCode.FAILED_TO_GENERATE, None
 
-        pharmacophore_feature_all_confs = np.array(
-            [
-                self.get_centroid_pharmacophoric_features(
-                    each_mol,
-                    kmeans_method_str=self.kmeans_method_str,
-                )
-                for each_mol in each_mol_with_all_confs_list
-            ]
-        )
+        try:
+            pharmacophore_feature_all_confs = np.array(
+                [
+                    self.get_centroid_pharmacophoric_features(
+                        each_mol,
+                        kmeans_method_str=self.kmeans_method_str,
+                    )
+                    for each_mol in each_mol_with_all_confs_list
+                ]
+            )
+        except ValueError as e:
+            if original_smiles is not None:
+                print(f"Failed molecule had SMILES: {original_smiles}")
+            print(e)
+            return GetFepopStatusCode.FAILED_TO_GENERATE, None
 
         medoids = self._get_k_medoids(
             pharmacophore_feature_all_confs, self.num_fepops_per_mol
@@ -833,7 +837,9 @@ class Fepops:
                 initializer=self._init_worker_calc_similarity,
                 initargs=(query, candidate),
             ) as pool:
-                parallel_results=list(pool.imap(self._work_calc_similarity, (range(len(candidate)))))
+                parallel_results = list(
+                    pool.imap(self._work_calc_similarity, (range(len(candidate))))
+                )
             return parallel_results
         if not isinstance(candidate, np.ndarray):
             candidate_status, candidate = self.get_fepops(candidate)
