@@ -274,7 +274,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
                 return np.nan
         if any(x is None for x in (fepops_features_1, fepops_features_2)):
             return np.nan
-        score=self.fepops_object.calc_similarity(fepops_features_1, fepops_features_2)
+        score = self.fepops_object.calc_similarity(fepops_features_1, fepops_features_2)
         return score if score is not None else np.nan
 
     def write(self):
