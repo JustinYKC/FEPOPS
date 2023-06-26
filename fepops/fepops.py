@@ -11,7 +11,7 @@ import numpy as np
 from tqdm import tqdm
 import itertools, zlib
 import torch
-from typing import Union, Optional, Tuple
+from typing import Union, Optional, Tuple, Literal
 from enum import Enum
 import multiprocessing as mp
 from multiprocessing import SimpleQueue
@@ -23,19 +23,42 @@ GetFepopStatusCode = Enum(
 
 
 class Fepops:
-    """Fepops molecular similarity object
+    """Fepops (Feature Points) molecular similarity object
 
-    Fepops allows the comparison of molecules using feature points, see
-    the original publication for more information https://pubs.acs.org/doi/10.1021/jm049654z
-    In short, featurepoints reduce the number of points used to represent a molecule and can
-    be used to compare molecules in the hope of discovering biosimilars based on queries.
+    Fepops allows the comparison of molecules using feature points, see the original
+    publication for more information: https://doi.org/10.1021/jm049654z. In short,
+    featurepoints reduce the number of points used to represent a molecule by combining
+    atoms and their properties. Typically used to compare libraries of small molecules
+    against known actives in the hope of discovering biosimilars based on queries.
 
     Parameters
     ----------
     kmeans_method : str, optional
-        Method which should be used for kmeans calculation, can be
-        one of "sklearn", "pytorch-gpu", or "pytorch-cpu". By
-        default "pytorch-cpu".
+        String literal denoting the method which should be used for kmeans calculations.
+        May be one of "sklearn", "pytorch-gpu", or "pytorch-cpu". If "sklearn" is passed
+        then Scikit-learn's kmeans implementation is used. However a faster
+        implementation from the fast_pytorch_kmeans package can also be used if Pytorch
+        is available and may be run in cpu-only mode, or GPU accelerated mode. Note:
+        GPU accelerated mode should only be used if you are stretching the capabilities
+        in terms of feature points for large molecules.  Small molecules will not
+        benefit from GPU acceleration due to overheads.  By default "pytorch-cpu"
+    max_tautomers : Optional[int], optional
+        Maximum number of tautomers which should be generated. Internally, this
+        implementation of FEPOPS relies upon RDKit's TautomerEnumerator to generate
+        tautomers and may optionally pass in a limit to the number of Tautomers to
+        generate. Unless the molecules (or macromolecules) you are working with generate
+        massive numbers of tautomers, this should be None implying that no limit should
+        be placed on tautomer generation. By default None
+    num_fepops_per_mol : int, optional
+            Number of feature points to use in the representation of a molecule.
+            Literature notes that 7 has been empirically found to be a good number of
+            feature points for performant representations of small molecules. This might
+            be increased if you are dealing with large and very flexible molecules. By
+            default 7
+    num_centroids_per_fepop : int, optional
+            Each fepop is represented by a number of centres, into which atom properties
+            are compressed. Literature notes that this has been empirically determined
+            to be 4 for a performant representation of small molecules. By default 4
 
     Raises
     ------
@@ -45,7 +68,7 @@ class Fepops:
 
     def __init__(
         self,
-        kmeans_method: str = "pytorch-cpu",
+        kmeans_method: Literal['sklearn', 'pytorch-cpu', 'pytorch-gpu'] = 'pytorch-cpu',
         max_tautomers: Optional[int] = None,
         *,
         num_fepops_per_mol: int = 7,
@@ -79,12 +102,13 @@ class Fepops:
         )
 
     def _get_k_medoids(
-        self, input_x: np.ndarray, k: int = 7, seed: int = 42
+        self, input_x: np.ndarray, k: int = 7, random_state: int = 42
     ) -> np.ndarray:
         """Select k Fepops from conformers
 
-        Gets k mediods from conformers (and conformers of tautomers) which
-        are representative of the molcule.
+        Gets k mediods from conformers (and tautomers) which are representative
+        of the molecule as a function of conformer and tautomer states by virtue
+        of chosen fepops being diverse.
 
         Parameters
         ----------
@@ -92,11 +116,15 @@ class Fepops:
             The pharmacophore features of all conformers.
         k : int
             The number of medoids for clustering. By default 7.
+        random_state : int
+            Integer to use as a random state when seeding the random number
+            generator.  By default 42.
 
         Returns
         -------
         np.ndarray
-            The final Fepops descriptors of the k representative conformers.
+            The final Fepops descriptors comprised of k representative
+            conformers/tautomers.
         """
         input_x = np.unique(input_x, axis=0)
 
@@ -106,7 +134,7 @@ class Fepops:
         point_to_centroid_map = np.ones(input_x.shape[0])
         point_to_centroid_map_prev = np.zeros_like(point_to_centroid_map)
 
-        np_rng = np.random.default_rng(seed=seed)
+        np_rng = np.random.default_rng(seed=random_state)
         medoids = input_x[
             np_rng.choice(np.arange(input_x.shape[0]), size=k, replace=False), :
         ]
@@ -124,13 +152,10 @@ class Fepops:
                     point_to_centroid_map[chosen_x_point] = i
                 medoids[i] = np.median(input_x[point_to_centroid_map == i], axis=0)
         # Sorting at this stage for reproducibility with existing pregenerated
-        # descriptor sets.
+        # descriptor sets and convention with early fepops versions which relied
+        # upon fepops being sorted by charge (before moving to the newer CombiAlign
+        # scoring algorithm)
         return medoids[np.lexsort(medoids.T[::-1])]
-
-    def annotate_atom_idx(self, mol: Chem.rdchem.Mol):
-        for i, atom in enumerate(mol.GetAtoms()):
-            # For each atom, set the property "molAtomMapNumber" to a custom number, let's say, the index of the atom in the molecule
-            atom.SetProp("molAtomMapNumber", str(atom.GetIdx()))
 
     def _calculate_atomic_logPs(self, mol: Chem.rdchem.Mol) -> dict:
         """Calculate logP contribution for each of atom in a molecule
