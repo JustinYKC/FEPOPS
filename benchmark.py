@@ -94,7 +94,8 @@ class ROCScorer:
                     scores = np.array(
                         sm.descriptor_score_func(
                             descriptors[sm_i][active_i], descriptors[sm_i]
-                        ), dtype=float
+                        ),
+                        dtype=float,
                     )
                 else:
                     scores = np.array(
@@ -104,7 +105,8 @@ class ROCScorer:
                             )
                             for smiles_i in range(len(descriptors[0]))
                         ],
-                    dtype=float)
+                        dtype=float,
+                    )
                 scores_dict[sm.name].append(
                     roc_auc_score(
                         labels[np.argwhere(~np.isnan(scores))],
@@ -266,6 +268,7 @@ class FepopsBenchmarker:
         data_tsv_contains_canonical_smiles: bool = True,
         smiles_column_title: str = "SMILES",
         active_flag_column_title: str = "Active",
+        results_output_dir:Optional[Union[str, Path]]=None,
     ):
         roc_scorer = ROCScorer(
             [
@@ -302,9 +305,41 @@ class FepopsBenchmarker:
             active_flag_column_title=active_flag_column_title,
         )
         auroc_results_df = pd.DataFrame.from_dict(scores_dict)
-        print(auroc_results_df.describe())
-        auroc_results_df.to_csv(f"tmp_benchmark_res_{Path(data_tsv).stem}.csv")
+        if results_output_dir is None:
+            results_output_dir=Path(data_tsv).parent
+        results_output_dir.mkdir(parents=True, exist_ok=True)
+        print(data_tsv+"\n"+auroc_results_df.describe())
+        auroc_results_df.to_csv(
+            results_output_dir/f"results_benchmarking_{Path(data_tsv).stem.replace('benchmarking_','').replace('_molecules','')}.csv"
+        )
 
+    def auroc_performance_on_dir(
+        self,
+        working_dir: Union[Path, str] = Path("."),
+        data_tsv_contains_canonical_smiles: bool = True,
+        smiles_column_title: str = "SMILES",
+        active_flag_column_title: str = "Active",
+        results_output_dir: Optional[Union[Path, str]] = None,
+    ):
+        working_dir = Path(working_dir)
+        csv_files = [Path(f) for f in working_dir.glob("benchmarking_*_molecules.csv")]
+        db_and_tsv = []
+        for csvf in csv_files:
+            target = str(csvf.stem).split("_")[1]
+            db_file_path = (
+                working_dir / f"benchmarking_dud_e_diverse_mols_by_target_{target}.db"
+            )
+            if db_file_path.exists():
+                db_and_tsv.append((db_file_path, csvf))
+        print(db_and_tsv)
+        for db_file_path, csv_file_path in tqdm(db_and_tsv):
+            self.auroc_performance(
+                csv_file_path,
+                data_tsv_contains_canonical_smiles=data_tsv_contains_canonical_smiles,
+                smiles_column_title=smiles_column_title,
+                active_flag_column_title=active_flag_column_title,
+                results_output_dir=results_output_dir
+            )
 
 if __name__ == "__main__":
     fire.Fire(FepopsBenchmarker)
