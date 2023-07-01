@@ -6,7 +6,7 @@ from sklearn.datasets import make_classification
 from tqdm import tqdm
 from fepops import Fepops
 from dataclasses import dataclass
-from typing import Callable, Union
+from typing import Callable, Union, Optional
 from pathlib import Path
 import pandas as pd
 from rdkit import Chem
@@ -18,12 +18,15 @@ from sklearn.metrics import roc_auc_score
 from fepops.fepops_persistent import get_persistent_fepops_storage_object
 from typing import Union, Optional
 import multiprocessing as mp
-
+from multiprocessing import SimpleQueue
 
 @dataclass
 class SimilarityMethod:
     name: str
+    supports_multiple_candidates: bool
     score: Callable
+    descriptor_calc_func: Optional[Callable] = None
+    descriptor_score_func: Optional[Callable] = None
 
 
 class Filter:
@@ -220,21 +223,120 @@ class ROCScorer:
             raise ValueError(
                 f"Could not find a '{smiles_column_title}' column in the DataFrame. Consider passing a column title to the 'active_flag_column_title' argument to get_auroc_scores"
             )
-        labels = np.array(df[active_flag_column_title].tolist(), dtype=int)
-        scores_dict = {sm.name: [] for sm in self.similarity_methods}
-        for active in df.query(f"{active_flag_column_title}==1")[
+
+        smiles_list = df[smiles_column_title].tolist()
+        labels_list = df[active_flag_column_title].tolist()
+        descriptors = []
+        for sm in self.similarity_methods:
+            descriptors.append([])
+            for smiles in tqdm(smiles_list, desc=f"Caching descriptors for {sm.name}"):
+                res = sm.descriptor_calc_func(smiles)
+                if isinstance(res, tuple):
+                    descriptors[-1].append(res[-1])
+                else:
+                    descriptors[-1].append(res)
+
+        problematic_molecule_ilocs = []
+        assert (
+            len(set([len(d) for d in descriptors])) == 1
+        ), "Generation of descriptors yielded different lengths, something went very wrong"
+        for j in range(len(descriptors[0])):
+            vals = [descriptors[i][j] is not None for i in range(len(descriptors))]
+            if not all(vals):
+                problematic_molecule_ilocs.append(j)
+        problematic_molecule_smiles = df.iloc[problematic_molecule_ilocs][
             smiles_column_title
-        ].tolist():
+        ].tolist()
+        if len(problematic_molecule_smiles) > 0:
+            print('─' * 80)
+            print("Warning")
+            print(
+                "Problematic molecules for which no descriptors could be retrieved were found. "
+            )
+            print("The following molecules will not be included in AUROC calculations:")
+            for pm in problematic_molecule_smiles:
+                print(pm)
+            print('─' * 80)
+            problematic_molecule_ilocs.sort(reverse=True)
+            for pmi in problematic_molecule_ilocs:
+                del labels_list[pmi]
+                for d_i in range(len(descriptors)):
+                    del descriptors[d_i][pmi]
+
+        labels = np.array(labels_list, dtype=int)
+        scores_dict = {sm.name: [] for sm in self.similarity_methods}
+        for sm_i, sm in enumerate(self.similarity_methods):
+            for active_i in tqdm(
+                np.argwhere(np.array(labels_list) == 1).flatten(),
+                desc=f"Assessing active recall (AUROC) for {sm.name}",
+            ):
+                if sm.supports_multiple_candidates:
+                    scores = np.array(
+                        sm.descriptor_score_func(
+                            descriptors[sm_i][active_i], descriptors[sm_i]
+                        ),
+                        dtype=float,
+                    )
+                else:
+                    scores = np.array(
+                        [
+                            sm.descriptor_score_func(
+                                descriptors[sm_i][active_i], descriptors[sm_i][smiles_i]
+                            )
+                            for smiles_i in range(len(descriptors[0]))
+                        ],
+                        dtype=float,
+                    )
+                scores_dict[sm.name].append(
+                    roc_auc_score(
+                        labels[np.argwhere(~np.isnan(scores))],
+                        scores[np.argwhere(~np.isnan(scores))],
+                    )
+                )
+        return scores_dict
+
+    def get_auroc_scores_fast(
+        self,
+        df: pd.DataFrame,
+        smiles_column_title="SMILES",
+        active_flag_column_title="Active",
+    ) -> dict[str, float]:
+        if active_flag_column_title not in df.columns:
+            raise ValueError(
+                f"Could not find a '{active_flag_column_title}' column in the DataFrame to indicate if the compound is active, or a decoy. Consider passing a column title to the 'active_flag_column_title' argument to get_auroc_scores"
+            )
+        if smiles_column_title not in df.columns:
+            raise ValueError(
+                f"Could not find a '{smiles_column_title}' column in the DataFrame. Consider passing a column title to the 'active_flag_column_title' argument to get_auroc_scores"
+            )
+        labels = np.array(df[active_flag_column_title].tolist(), dtype=int)
+        descriptors = {
+            sm.name: {m: sm.descriptor_calc_func(m) for m in df[smiles_column_title]}
+            for sm in self.similarity_methods
+        }
+        scores_dict = {sm.name: [] for sm in self.similarity_methods}
+        for active in tqdm(
+            df.query(f"{active_flag_column_title}==1")[smiles_column_title].tolist(),
+            desc="Assessing active recall (AUROC)",
+        ):
             scores = np.array(
                 [
                     [
-                        sim_method.score(active, s)
+                        sim_method.score(
+                            descriptors[sim_method.name][active],
+                            descriptors[sim_method.name][s],
+                        )
                         for sim_method in self.similarity_methods
                     ]
                     for s in df[smiles_column_title].tolist()
                 ]
             )
-            roc_scores = [roc_auc_score(labels, s) for s in scores.T]
+            roc_scores = [
+                roc_auc_score(
+                    labels[np.argwhere(~np.isnan(s))], s[np.argwhere(~np.isnan(s))]
+                )
+                for s in scores
+            ]
             [
                 scores_dict[m.name].append(rs)
                 for m, rs in zip(self.similarity_methods, roc_scores)
@@ -331,8 +433,10 @@ class FepopsBenchmarker:
         )
 
     @staticmethod
-    def _score_morgan(m1: str, m2: str, smi_to_mol_func) -> float:
+    def _score_morgan(m1: str, m2: Union[str, None], smi_to_mol_func) -> float:
         m1 = smi_to_mol_func(m1)
+        if m2 is None:
+            return AllChem.GetMorganFingerprint(m1, 2)
         m2 = smi_to_mol_func(m2)
         fp1 = AllChem.GetMorganFingerprint(m1, 2)
         fp2 = AllChem.GetMorganFingerprint(m2, 2)
@@ -341,18 +445,33 @@ class FepopsBenchmarker:
     def auroc_performance(
         self,
         data_tsv: Union[Path, str],
-        smiles_column_title: str = "Std_SMILES",
-        active_flag_column_title: str = "Activity",
+        data_tsv_contains_canonical_smiles: bool = True,
+        smiles_column_title: str = "SMILES",
+        active_flag_column_title: str = "Active",
+        results_output_dir:Optional[Union[str, Path]]=None,
     ):
         roc_scorer = ROCScorer(
             [
                 SimilarityMethod(
                     "Morgan",
+                    False,
                     lambda x, y: self._score_morgan(
                         x, y, self.fepops.fepops_object._mol_from_smiles
                     ),
+                    lambda x: self._score_morgan(
+                        x, None, self.fepops.fepops_object._mol_from_smiles
+                    ),
+                    lambda x, y: DataStructs.DiceSimilarity(x, y),
                 ),
-                SimilarityMethod("FEPOPS", self.fepops.calc_similarity),
+                SimilarityMethod(
+                    "FEPOPS",
+                    True,
+                    self.fepops.calc_similarity,
+                    lambda x: self.fepops.get_fepops(
+                        x, is_canonical=data_tsv_contains_canonical_smiles
+                    ),
+                    self.fepops.calc_similarity,
+                ),
             ]
         )
         scores_dict = roc_scorer.get_auroc_scores(
@@ -362,11 +481,45 @@ class FepopsBenchmarker:
                 index_col=[0],
                 header=0,
             ).reset_index(),
-            smiles_column_title="Std_SMILES",
-            active_flag_column_title="Activity",
+            smiles_column_title=smiles_column_title,
+            active_flag_column_title=active_flag_column_title,
         )
-        print(pd.DataFrame.from_dict(scores_dict).describe())
+        auroc_results_df = pd.DataFrame.from_dict(scores_dict)
+        if results_output_dir is None:
+            results_output_dir=Path(data_tsv).parent
+        results_output_dir.mkdir(parents=True, exist_ok=True)
+        print(data_tsv+"\n"+auroc_results_df.describe())
+        auroc_results_df.to_csv(
+            results_output_dir/f"results_benchmarking_{Path(data_tsv).stem.replace('benchmarking_','').replace('_molecules','')}.csv"
+        )
 
+    def auroc_performance_on_dir(
+        self,
+        working_dir: Union[Path, str] = Path("."),
+        data_tsv_contains_canonical_smiles: bool = True,
+        smiles_column_title: str = "SMILES",
+        active_flag_column_title: str = "Active",
+        results_output_dir: Optional[Union[Path, str]] = None,
+    ):
+        working_dir = Path(working_dir)
+        csv_files = [Path(f) for f in working_dir.glob("benchmarking_*_molecules.csv")]
+        db_and_tsv = []
+        for csvf in csv_files:
+            target = str(csvf.stem).split("_")[1]
+            db_file_path = (
+                working_dir / f"benchmarking_dud_e_diverse_mols_by_target_{target}.db"
+            )
+            if db_file_path.exists():
+                db_and_tsv.append((db_file_path, csvf))
+        print(db_and_tsv)
+        for db_file_path, csv_file_path in tqdm(db_and_tsv):
+            self.auroc_performance(
+                csv_file_path,
+                data_tsv_contains_canonical_smiles=data_tsv_contains_canonical_smiles,
+                smiles_column_title=smiles_column_title,
+                active_flag_column_title=active_flag_column_title,
+                results_output_dir=results_output_dir
+            )
 
 if __name__ == "__main__":
     # fire.Fire(FepopsBenchmarker)
