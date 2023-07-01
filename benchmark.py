@@ -17,6 +17,7 @@ from rdkit.Chem.MolStandardize import rdMolStandardize
 from sklearn.metrics import roc_auc_score
 from fepops.fepops_persistent import get_persistent_fepops_storage_object
 from typing import Union, Optional
+import multiprocessing as mp
 
 
 @dataclass
@@ -24,8 +25,9 @@ class SimilarityMethod:
     name: str
     score: Callable
 
+
 class Filter:
-    def __init__(self, min_atoms:int=4) -> None:
+    def __init__(self, min_atoms: int = 4) -> None:
         self.min_atoms = min_atoms
         self.lfc = rdMolStandardize.LargestFragmentChooser()
 
@@ -42,20 +44,22 @@ class Filter:
         Returns
         -------
         Chem.rdchem.Mol or None
-        Return a Rdkit mol object if the input molecule meets the criterion, otherwise return None.    
+        Return a Rdkit mol object if the input molecule meets the criterion, otherwise return None.
         """
         try:
             cleaned_molecule = rdMolStandardize.Cleanup(mol)
             smiles = Chem.MolToSmiles(cleaned_molecule)
             if "." in smiles:
-                cleaned_molecule = rdMolStandardize.Cleanup(self.lfc.choose(cleaned_molecule))
-        except: 
+                cleaned_molecule = rdMolStandardize.Cleanup(
+                    self.lfc.choose(cleaned_molecule)
+                )
+        except:
             return None
         return cleaned_molecule
-    
+
     def _filter_by_atom_num(self, mol: Chem.rdchem.Mol) -> Union[Chem.rdchem.Mol, None]:
         """Filter molecules by number of atoms
-    
+
         Filter out molecules by the number of atoms.
 
         Parameters
@@ -71,11 +75,11 @@ class Filter:
         Return a Rdkit mol object if the input molecule meets the criterion, otherwise return None.
         """
         atom_num = mol.GetNumAtoms()
-        if atom_num > self.min_atoms: 
+        if atom_num > self.min_atoms:
             return mol
-        else: 
+        else:
             return None
-        
+
     def __call__(self, mol: Chem.rdchem.Mol) -> Union[Chem.rdchem.Mol, None]:
         """Apply all filters
 
@@ -83,120 +87,120 @@ class Filter:
         ----------
         mol : Chem.rdchem.Mol
         The Rdkit mol object of the input molecule.
-   
+
         Returns
         -------
         filter_result
-        Return a Rdkit mol object if the input molecule meets all criteria, otherwise return None. 
+        Return a Rdkit mol object if the input molecule meets all criteria, otherwise return None.
         """
         filter_result = self.filter_mol(mol)
         return filter_result
-    
+
     def filter_mol(self, mol: Chem.rdchem.Mol) -> Union[Chem.rdchem.Mol, None]:
         """Apply all filters
 
-        Perform two filters (minimum number of atoms, and salt/ion) in sequence 
+        Perform two filters (minimum number of atoms, and salt/ion) in sequence
         to obtain the final molecules as required.
 
         Parameters
         ----------
         mol : Chem.rdchem.Mol
         The Rdkit mol object of the input molecule.
-   
+
         Returns
         -------
         Chem.rdchem.Mol or None
-        Return a Rdkit mol object if the input molecule meets all criteria, otherwise return None.       
+        Return a Rdkit mol object if the input molecule meets all criteria, otherwise return None.
         """
         mol = self._remove_salt(mol)
-        if mol is None: 
+        if mol is None:
             return None
-        else: 
+        else:
             mol = self._filter_by_atom_num(mol)
-            if mol is None: 
+            if mol is None:
                 return None
             else:
                 return mol
 
-class DataPreprocesser:
-    def __init__(self, dataset: Union[Path, str]="/home/justin/pangeAI/develop/benchmark/dud_e/all") -> None:
-            self.dataset_path = Path(dataset)
-            if not self.dataset_path.exists():
-                raise ValueError(f"Dataset {self.dataset_path} not found")
 
-    def _find_current_dir(
-        self, 
-        target_text: str, 
-        dir_or_file: str='file', 
-        current_path: Path=Path(os.getcwd())
-        ) -> list:
-        """Find a desired directory or a file
-
-        Private method used to find a desired directory or a file with a name of target texts recursively on a given path.
-
-        Parameters
-        ----------
-        target_text : str
-            A given text included in any file names.
-        dir_or_file : str
-            Specify a directory or a file to be found. By default 'file'.
-        current_path : pathlib.Path   
-            The path object indicating a start point for searching. By default current working directory.
-
-        Returns
-        -------
-        list
-            A list containing path objects of found files or directories. 
-
-        """
-        if dir_or_file == 'dir':
-            return [item for item in current_path.rglob(target_text) if item.is_dir()]
-        elif dir_or_file == 'file':
-            return [item for item in current_path.rglob(target_text) if item.is_file()]
-        else:
-            print ("Please choose 'dir' or 'file'")
-    
-    def _get_mol_df_from_files(
-        self, 
-        file_path: Path, 
-        smiles_col_num: int=0, 
-        seperator: str=" ", 
-        is_active: bool=True
-        ) -> pd.DataFrame:
-        with open(file_path, 'r') as input_smiles_file:
-            if file_path.suffix == ".ism":
-                df = pd.DataFrame.from_records(
-                    [(line.split(seperator)[smiles_col_num], is_active) for line in input_smiles_file.readlines() if line.strip()], 
-                    columns=["SMILES", "Active"]
-                )
-                PandasTools.AddMoleculeColumnToFrame(df, smilesCol="SMILES", molCol="Mol")
-                return df
-            elif file_path.suffix == ".sdf":
-                return PandasTools.LoadSDF(str(file_path), smilesName="SMILES", molColName="Mol", idName='ID').drop(columns="ID").assign(Active=is_active)
-            else: 
-                raise ValueError(f"File found not a SDF or SMILES: {file_path}")
-    
-    def create_tsv(
+class DudePreprocessor:
+    def __init__(
         self,
-        tsv_path: Path, 
-        target_text_for_active_and_inactive: dict={"Active":"actives_final.ism", "Inactive": "decoys_final.ism"},
-        seperator: str=" ",
-        smiles_col_num: int=0,
-        ):
-        df = pd.DataFrame(columns=["SMILES", "Active", "Mol"])
-        for k, v in target_text_for_active_and_inactive.items():
-            for path in self._find_current_dir(v, "file", self.dataset_path):
-                df = pd.concat([df, self._get_mol_df_from_files(path, smiles_col_num, seperator, k == "Active")],
-                               ignore_index=True, sort=False
-                               )    
-        df = df.loc[~df["Mol"].isna()]
+        dude_directory: Union[Path, str] = "data/dude/",
+    ) -> None:
+        self.dude_path = Path(dude_directory)
+        self.dude_unprocessed_path = self.dude_path / Path("unprocessed")
+        if not self.dude_path.exists():
+            raise FileNotFoundError(f"Dude dataset not found in path: {self.dude_path}")
+        self.fepops_ob = Fepops()
+        print(self.dude_path)
+        print(self.dude_unprocessed_path)
 
-        filter = Filter()
-        df["Mol"] = df.Mol.apply(filter)
-        df = df.loc[~df["Mol"].isna()]
-        
-        df["SMILES"] = df.Mol.apply(lambda x:Chem.CanonSmiles(Chem.MolToSmiles(x)))
-        df.to_csv(Path(tsv_path), columns=["SMILES", "Active"], sep="\t", index=False, header=True)
+    def __call__(
+        self,
+    ):
+        self.process()
+
+    def process(
+        self,
+    ):
+        dude_targets = [
+            t.parent.name for t in self.dude_path.glob("unprocessed/*/actives_final.ism")
+        ]
+        print(dude_targets)
+        for target in tqdm(dude_targets, desc=f"Preparing targets"):
+            self.create_dude_target_csv_data(target)
+
+    @staticmethod
+    def _parallel_init_worker_desc_gen_shared_fepops_ob():
+        global shared_fepops_ob
+        shared_fepops_ob = Fepops()
+
+    @staticmethod
+    def _parallel_get_rdkit_cansmi(s):
+        global shared_fepops_ob
+        mol = shared_fepops_ob._mol_from_smiles(s)
+        if mol is None:
+            return ""
+        return Chem.MolToSmiles(mol)
+
+    def create_dude_target_csv_data(
+        self,
+        dude_target: Path,
+        actives_file: Path = Path("actives_final.ism"),
+        decoys_file: Path = Path("decoys_final.ism"),
+        seperator: str = " ",
+    ):
+        if not self.dude_unprocessed_path.exists():
+            raise FileNotFoundError(
+                f"no directory under {self.dude_path} called 'unprocessed'. This unprocessed directory should contain all dude files downloaded and extracted under subdirectories with the names of targets"
+            )
+        processed_path = self.dude_path / Path("processed")
+        processed_path.mkdir(parents=True, exist_ok=True)
+        actives = pd.read_csv(
+            self.dude_unprocessed_path / Path(dude_target) / actives_file,
+            sep=seperator,
+            header=None,
+            names=["SMILES", "DUDEID", "CHEMBLID"],
+        )
+        actives["Active"] = 1
+        decoys = pd.read_csv(
+            self.dude_unprocessed_path / Path(dude_target) / decoys_file,
+            sep=seperator,
+            header=None,
+            names=["SMILES", "DUDEID"],
+        )
+        decoys["Active"] = 0
+        df = pd.concat([actives, decoys]).reset_index().drop(columns="index")
+        df["rdkit_canonical_smiles"] = tqdm(
+            mp.Pool(
+                initializer=self._parallel_init_worker_desc_gen_shared_fepops_ob
+            ).imap(self._parallel_get_rdkit_cansmi, df.SMILES, chunksize=100),
+            desc=f"Generating {dude_target} benchmark file",
+            total=len(df),
+        )
+        df.to_csv(processed_path / f"dude_target_{dude_target}.csv", index=False)
+
 
 class ROCScorer:
     def __init__(self, methods: list[SimilarityMethod]) -> None:
@@ -236,6 +240,7 @@ class ROCScorer:
                 for m, rs in zip(self.similarity_methods, roc_scores)
             ]
         return scores_dict
+
 
 class FepopsBenchmarker:
     def __init__(self, database_file: str = "benchmark.db"):
@@ -364,5 +369,5 @@ class FepopsBenchmarker:
 
 
 if __name__ == "__main__":
-    #fire.Fire(FepopsBenchmarker)
-    fire.Fire(DataPreprocesser)
+    # fire.Fire(FepopsBenchmarker)
+    fire.Fire(DudePreprocessor)
