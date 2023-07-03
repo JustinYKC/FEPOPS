@@ -59,9 +59,21 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
     """
 
     @staticmethod
-    def _parallel_init_worker_desc_gen_shared_fepops_ob():
+    def _parallel_init_worker_get_cansmi_mol_tuple(smiles_is_rdkit_canonical):
+        global sirdkc
+        sirdkc = smiles_is_rdkit_canonical
+
+    @staticmethod
+    def _parallel_get_cansmi_tuple(m):
+        global sirdkc
+        return FepopsPersistentAbstractBaseClass._get_can_smi_mol_tuple(
+            m, smiles_guaranteed_rdkit_canonical=sirdkc
+        )
+
+    @staticmethod
+    def _parallel_init_worker_desc_gen_shared_fepops_ob(fepops_object):
         global shared_fepops_ob
-        shared_fepops_ob = Fepops()
+        shared_fepops_ob = fepops_object
 
     @staticmethod
     def _parallel_get_gen_fepops_descriptors(m):
@@ -85,10 +97,17 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
         self,
         smiles: Union[str, Path, list[str]],
         add_failures_to_database: bool = True,
+        smiles_guaranteed_rdkit_canonical: bool = False,
+        fepops_object_constructor_kwargs: dict = {},
     ):
+        """Pregenerate FEPOPS descriptors for a set of SMILES strings"""
+
         canonical_smiles_to_mol_dict = self.get_cansmi_to_mol_dict_not_in_database(
-            smiles
+            smiles, smiles_guaranteed_rdkit_canonical=smiles_guaranteed_rdkit_canonical
         )
+        if len(canonical_smiles_to_mol_dict) == 0:
+            print("Nothing to add to database")
+            return
         if not self.parallel:
             for rdkit_canonical_smiles, mol in tqdm(
                 canonical_smiles_to_mol_dict.items(), desc="Generating fepops"
@@ -100,10 +119,14 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
                 f"Added {len(canonical_smiles_to_mol_dict)} new molecues to the database ({self.database_file})"
             )
         else:  # Do it in parallel
-            cansmi_fepops_tuples = []
-            for res in tqdm(
+            n_successes = 0
+            n_failures = 0
+            for rdkit_canonical_smiles, (status, new_fepop) in tqdm(
                 mp.Pool(
-                    initializer=self._parallel_init_worker_desc_gen_shared_fepops_ob
+                    # processes=min(len(canonical_smiles_to_mol_dict), mp.cpu_count()),
+                    processes=2,
+                    initializer=self._parallel_init_worker_desc_gen_shared_fepops_ob,
+                    initargs=(Fepops(**fepops_object_constructor_kwargs),),
                 ).imap(
                     self._parallel_get_gen_fepops_descriptors,
                     canonical_smiles_to_mol_dict.items(),
@@ -111,13 +134,14 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
                 desc="Generating descriptors (parallel)",
                 total=len(canonical_smiles_to_mol_dict),
             ):
-                cansmi_fepops_tuples.append(res)
-
-            for rdkit_canonical_smiles, (status, new_fepop) in cansmi_fepops_tuples:
+                if status == GetFepopStatusCode.SUCCESS:
+                    n_successes += 1
+                else:
+                    n_failures += 1
                 if status == GetFepopStatusCode.SUCCESS or add_failures_to_database:
                     self.add_fepop(rdkit_canonical_smiles, new_fepop)
             print(
-                f"Added {len(canonical_smiles_to_mol_dict)} new molecues to the database ({self.database_file})"
+                f"Successfully added {n_successes} new molecues to the database ({self.database_file}), {n_failures} failed"
             )
 
     @abstractmethod
@@ -151,7 +175,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
             )
 
     @staticmethod
-    def _get_can_smi_mol_tuple(s: str, is_canonical: bool = False):
+    def _get_can_smi_mol_tuple(s: str, smiles_guaranteed_rdkit_canonical: bool = False):
         try:
             mol = Chem.MolFromSmiles(s)
         except:
@@ -162,13 +186,15 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
         if mol is None:
             print(f"Could not parse smiles to a valid molecule, smiles was: {s}")
             return (s, mol)
-        if is_canonical:
+        if smiles_guaranteed_rdkit_canonical:
             return (s, mol)
         else:
-            return (Chem.CanonSmiles(Chem.MolToSmiles(mol)), mol)
+            return (Chem.MolToSmiles(mol), mol)
 
     def get_cansmi_to_mol_dict_not_in_database(
-        self, smiles: Union[str, Path, list[str]]
+        self,
+        smiles: Union[str, Path, list[str]],
+        smiles_guaranteed_rdkit_canonical: bool = False,
     ):
         if isinstance(smiles, str):
             smiles = Path(smiles)
@@ -179,43 +205,54 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
                 ]
             else:
                 raise ValueError(
-                    f"smiles file ({smiles}) not found. If you are passing smiles, make it into a list"
+                    f"smiles file ({smiles}) not found. If you are passing smiles, place it into a list first"
                 )
         if not isinstance(smiles, list):
             raise ValueError(
                 "smiles should be a str or Path denoting the location of a smiles file, or a list of smiles"
             )
         smiles = list(set(smiles))
-        print(f"Got {len(smiles)} unique molecules")
+        print(f"Got {len(smiles)} unique SMILES strings")
 
         if not self.parallel:
             # Ensure unique (canonical, also storing intermediate mol)
             canonical_smiles_to_mol_dict = dict(
-                self._get_can_smi_mol_tuple(s)
-                for s in tqdm(smiles, desc="Uniquifying input smiles (parallel)")
+                self._get_can_smi_mol_tuple(
+                    s,
+                    smiles_guaranteed_rdkit_canonical=smiles_guaranteed_rdkit_canonical,
+                )
+                for s in tqdm(smiles, desc="Uniquifying input smiles (non-parallel)")
             )
         else:
             tmp_res_list = []
             # Ensure unique (canonical, also storing intermediate mol)
             for res in tqdm(
-                mp.Pool().imap(
-                    FepopsPersistentAbstractBaseClass._get_can_smi_mol_tuple, smiles
-                ),
+                mp.Pool(
+                    initializer=self._parallel_init_worker_get_cansmi_mol_tuple,
+                    initargs=(smiles_guaranteed_rdkit_canonical,),
+                    processes=max(1, min(len(smiles) / 50, mp.cpu_count())),
+                ).map(self._parallel_get_cansmi_tuple, smiles, chunksize=1),
                 desc="Uniquifying input smiles (parallel)",
                 total=len(smiles),
             ):
                 tmp_res_list.append(res)
+
             canonical_smiles_to_mol_dict = dict(tmp_res_list)
+
             del tmp_res_list
         # Make sure none are already in the database
         canonical_smiles_to_mol_dict = {
             cansmi: mol
-            for cansmi, mol in canonical_smiles_to_mol_dict.items()
+            for cansmi, mol in tqdm(
+                canonical_smiles_to_mol_dict.items(),
+                desc="Checking if mols already exist in the database",
+            )
             if not self.fepop_exists(cansmi)
         }
         print(
             f"Got {len(canonical_smiles_to_mol_dict)} unique molecules not already in the database"
         )
+
         return canonical_smiles_to_mol_dict
 
     def calc_similarity(

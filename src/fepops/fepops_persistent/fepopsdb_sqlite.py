@@ -98,7 +98,7 @@ class FepopsDBSqlite(FepopsPersistentAbstractBaseClass):
                 mol = None
             else:
                 rdkit_canonical_smiles, mol = self._get_can_smi_mol_tuple(
-                    smiles, is_canonical=is_canonical
+                    smiles, smiles_guaranteed_rdkit_canonical=is_canonical
                 )
         elif isinstance(smiles, Chem.rdchem.Mol):
             mol = smiles

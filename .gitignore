@@ -166,3 +166,4 @@ cython_debug/
 # Fepops specific folders to ignore
 data/
 .vscode/
+/*.prof

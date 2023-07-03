@@ -1,6 +1,4 @@
 import time
-import fire
-import os
 import numpy as np
 from sklearn.datasets import make_classification
 from tqdm import tqdm
@@ -12,13 +10,11 @@ import pandas as pd
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem import DataStructs
-from rdkit.Chem import PandasTools
 from rdkit.Chem.MolStandardize import rdMolStandardize
 from sklearn.metrics import roc_auc_score
 from fepops.fepops_persistent import get_persistent_fepops_storage_object
 from typing import Union, Optional
-import multiprocessing as mp
-from multiprocessing import SimpleQueue
+
 
 @dataclass
 class SimilarityMethod:
@@ -124,85 +120,6 @@ class Filter:
                 return None
             else:
                 return mol
-
-
-class DudePreprocessor:
-    def __init__(
-        self,
-        dude_directory: Union[Path, str] = "data/dude/",
-    ) -> None:
-        self.dude_path = Path(dude_directory)
-        self.dude_unprocessed_path = self.dude_path / Path("unprocessed")
-        if not self.dude_path.exists():
-            raise FileNotFoundError(f"Dude dataset not found in path: {self.dude_path}")
-        self.fepops_ob = Fepops()
-        print(self.dude_path)
-        print(self.dude_unprocessed_path)
-
-    def __call__(
-        self,
-    ):
-        self.process()
-
-    def process(
-        self,
-    ):
-        dude_targets = [
-            t.parent.name for t in self.dude_path.glob("unprocessed/*/actives_final.ism")
-        ]
-        print(dude_targets)
-        for target in tqdm(dude_targets, desc=f"Preparing targets"):
-            self.create_dude_target_csv_data(target)
-
-    @staticmethod
-    def _parallel_init_worker_desc_gen_shared_fepops_ob():
-        global shared_fepops_ob
-        shared_fepops_ob = Fepops()
-
-    @staticmethod
-    def _parallel_get_rdkit_cansmi(s):
-        global shared_fepops_ob
-        mol = shared_fepops_ob._mol_from_smiles(s)
-        if mol is None:
-            return ""
-        return Chem.MolToSmiles(mol)
-
-    def create_dude_target_csv_data(
-        self,
-        dude_target: Path,
-        actives_file: Path = Path("actives_final.ism"),
-        decoys_file: Path = Path("decoys_final.ism"),
-        seperator: str = " ",
-    ):
-        if not self.dude_unprocessed_path.exists():
-            raise FileNotFoundError(
-                f"no directory under {self.dude_path} called 'unprocessed'. This unprocessed directory should contain all dude files downloaded and extracted under subdirectories with the names of targets"
-            )
-        processed_path = self.dude_path / Path("processed")
-        processed_path.mkdir(parents=True, exist_ok=True)
-        actives = pd.read_csv(
-            self.dude_unprocessed_path / Path(dude_target) / actives_file,
-            sep=seperator,
-            header=None,
-            names=["SMILES", "DUDEID", "CHEMBLID"],
-        )
-        actives["Active"] = 1
-        decoys = pd.read_csv(
-            self.dude_unprocessed_path / Path(dude_target) / decoys_file,
-            sep=seperator,
-            header=None,
-            names=["SMILES", "DUDEID"],
-        )
-        decoys["Active"] = 0
-        df = pd.concat([actives, decoys]).reset_index().drop(columns="index")
-        df["rdkit_canonical_smiles"] = tqdm(
-            mp.Pool(
-                initializer=self._parallel_init_worker_desc_gen_shared_fepops_ob
-            ).imap(self._parallel_get_rdkit_cansmi, df.SMILES, chunksize=100),
-            desc=f"Generating {dude_target} benchmark file",
-            total=len(df),
-        )
-        df.to_csv(processed_path / f"dude_target_{dude_target}.csv", index=False)
 
 
 class ROCScorer:
@@ -448,7 +365,7 @@ class FepopsBenchmarker:
         data_tsv_contains_canonical_smiles: bool = True,
         smiles_column_title: str = "SMILES",
         active_flag_column_title: str = "Active",
-        results_output_dir:Optional[Union[str, Path]]=None,
+        results_output_dir: Optional[Union[str, Path]] = None,
     ):
         roc_scorer = ROCScorer(
             [
@@ -486,11 +403,12 @@ class FepopsBenchmarker:
         )
         auroc_results_df = pd.DataFrame.from_dict(scores_dict)
         if results_output_dir is None:
-            results_output_dir=Path(data_tsv).parent
+            results_output_dir = Path(data_tsv).parent
         results_output_dir.mkdir(parents=True, exist_ok=True)
-        print(data_tsv+"\n"+auroc_results_df.describe())
+        print(data_tsv + "\n" + auroc_results_df.describe())
         auroc_results_df.to_csv(
-            results_output_dir/f"results_benchmarking_{Path(data_tsv).stem.replace('benchmarking_','').replace('_molecules','')}.csv"
+            results_output_dir
+            / f"results_benchmarking_{Path(data_tsv).stem.replace('benchmarking_','').replace('_molecules','')}.csv"
         )
 
     def auroc_performance_on_dir(
@@ -518,9 +436,5 @@ class FepopsBenchmarker:
                 data_tsv_contains_canonical_smiles=data_tsv_contains_canonical_smiles,
                 smiles_column_title=smiles_column_title,
                 active_flag_column_title=active_flag_column_title,
-                results_output_dir=results_output_dir
+                results_output_dir=results_output_dir,
             )
-
-if __name__ == "__main__":
-    # fire.Fire(FepopsBenchmarker)
-    fire.Fire(DudePreprocessor)

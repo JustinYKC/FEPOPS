@@ -8,7 +8,6 @@ from fast_pytorch_kmeans import KMeans as _FastPTKMeans
 from scipy.spatial.distance import cdist, squareform, pdist
 from scipy.special import softmax
 import numpy as np
-from tqdm import tqdm
 import itertools, zlib
 import torch
 from typing import Union, Optional, Tuple, Literal
@@ -68,9 +67,9 @@ class Fepops:
 
     def __init__(
         self,
-        kmeans_method: Literal['sklearn', 'pytorch-cpu', 'pytorch-gpu'] = 'pytorch-cpu',
-        max_tautomers: Optional[int] = None,
+        kmeans_method: Literal['sklearn', 'pytorch-cpu', 'pytorch-gpu'] = 'sklearn',
         *,
+        max_tautomers: Optional[int] = None,
         num_fepops_per_mol: int = 7,
         num_centroids_per_fepop: int = 4,
     ):
@@ -269,7 +268,9 @@ class Fepops:
         """
         if kmeans_method == "sklearn":
             kmeans = _SKLearnKMeans(
-                n_clusters=num_centroids, random_state=seed, n_init="auto"
+                n_clusters=num_centroids,
+                random_state=seed,
+                n_init="auto",
             ).fit(atom_coords)
             centroid_coors = kmeans.cluster_centers_
             instance_cluster_labels = kmeans.labels_

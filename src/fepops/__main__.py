@@ -3,22 +3,51 @@ import fire
 from .fepops import Fepops, GetFepopStatusCode
 from .fepops_persistent import get_persistent_fepops_storage_object
 
-class FepopsCMDLineInterface():
-    def __init__(self, database:str=None):
-        self.database=database
-    
-    def get_fepops(self, smi):
+
+class FepopsCMDLineInterface:
+    def __init__(self, database_file: str = None):
+        self.database_file = database_file
+
+    def get_fepops(self, smi: str):
+        """Get Fepops descriptors from a SMILES string
+
+        Parameters
+        ----------
+        smi : str
+            Molecule as a SMILES string. Can also be None, in which case a failure error
+            status is returned along with None in place of the requested Fepops
+            descriptors.
+
+        Returns
+        -------
+        Tuple[GetFepopStatusCode, Union[np.ndarray, None]]
+            Returns a tuple, with the first value being a GetFepopStatusCode
+            (enum) denoting SUCCESS or FAILED_TO_GENERATE. The second tuple
+            element is either None (if unsuccessful), or a np.ndarray containing
+            the calculated Fepops descriptors of the requested input molecule.
+        """
         if self.database_file is not None:
             with get_persistent_fepops_storage_object(self.database_file) as f:
-                status, fepops_features = f.get_fepops(smi)
+                return f.get_fepops(smi)
         else:
             f = Fepops()
-            status, fepops_features = f.get_fepops(smi)
-        if status == GetFepopStatusCode.SUCCESS:
-            return(fepops_features)
-        else:
-            return f"Failed to generate FEPOPS descriptors for {smi}"
-    def calc_sim(self, smi1, smi2):
+            return f.get_fepops(smi)
+
+    def calc_sim(self, smi1: str, smi2: str):
+        """Calculate FEPOPS similarity between two smiles strings
+
+        Parameters
+        ----------
+        smi1 : str
+            Smiles string representing molecule 1
+        smi2 : str
+            Smiles string representing molecule 2
+
+        Returns
+        -------
+        float
+            Fepops similarity between the two supplied molecules
+        """
         if self.database_file is not None:
             with get_persistent_fepops_storage_object(self.database_file) as f:
                 fepops_status1, fepops_features1 = f.get_fepops(smi1)
@@ -41,8 +70,24 @@ class FepopsCMDLineInterface():
         if self.database_file.endswith((".json")):
             f_persistent.write()
 
+    def dude_preprocessor(self, dude_directory: str = "data/dude/"):
+        """Access functions for preparation and benchmarking of the DUDE dataset
+
+        The DUDE dataset consists of 102 targets, 22,886 active compounds along with
+        decoys. More information is available here:
+        https://dude.docking.org/
+
+        """
+        from .dude_preprocessor import DudePreprocessor
+
+        print("Dude DIR========", dude_directory)
+        dude_preprop = DudePreprocessor(dude_directory=dude_directory)
+        return dude_preprop
+
+
 def fepops_entrypoint():
     fire.Fire(FepopsCMDLineInterface)
 
+
 if __name__ == '__main__':
-  fire.Fire(FepopsCMDLineInterface)
+    fire.Fire(FepopsCMDLineInterface)

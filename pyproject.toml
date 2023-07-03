@@ -37,6 +37,7 @@ include = '''
 exclude = '''
 (
     __pycache__
+    |.*\.egg-info
 )
 '''
 
