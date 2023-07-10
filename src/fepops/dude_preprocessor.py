@@ -1,0 +1,133 @@
+from typing import Union, Optional
+from pathlib import Path
+from tqdm import tqdm
+from fepops import Fepops
+import pandas as pd
+import multiprocessing as mp
+from rdkit import Chem
+
+
+class DudePreprocessor:
+    def __init__(
+        self,
+        *,
+        dude_directory: Union[Path, str] = "data/dude/",
+    ) -> None:
+        print(dude_directory)
+        print(type(dude_directory))
+        self.dude_path = Path(dude_directory)
+        self.dude_unprocessed_path = self.dude_path / Path("unprocessed")
+        if not self.dude_path.exists():
+            raise FileNotFoundError(f"Dude dataset not found in path: {self.dude_path}")
+        self.dude_processed_path = self.dude_path / Path("processed")
+        self.dude_processed_path.parent.mkdir(parents=True, exist_ok=True)
+        self.fepops_ob = Fepops()
+
+    def __call__(
+        self,
+    ):
+        self.process()
+
+    def process(
+        self,
+        targets: Optional[Union[str, list[str]]] = None,
+        skip_existing: bool = True,
+    ):
+        if targets is None:
+            dude_targets = [
+                t.parent.name
+                for t in self.dude_path.glob("unprocessed/*/actives_final.ism")
+            ]
+        else:
+            if isinstance(targets, str):
+                targets = [targets]
+        print(f"Processing the following DUDE targets: {dude_targets}")
+        for target in tqdm(dude_targets, desc=f"Preparing targets"):
+            self.create_dude_target_csv_data(target, skip_existing=skip_existing)
+
+    @staticmethod
+    def _parallel_init_worker_desc_gen_shared_fepops_ob():
+        global shared_fepops_ob
+        shared_fepops_ob = Fepops()
+
+    @staticmethod
+    def _parallel_get_rdkit_cansmi(s):
+        global shared_fepops_ob
+        mol = shared_fepops_ob._mol_from_smiles(s)
+        if mol is None:
+            return ""
+        return Chem.MolToSmiles(mol)
+
+    def create_dude_target_csv_data(
+        self,
+        dude_target: Path,
+        actives_file: Path = Path("actives_final.ism"),
+        decoys_file: Path = Path("decoys_final.ism"),
+        seperator: str = " ",
+        skip_existing: bool = True,
+    ):
+        target_output_file = self.dude_processed_path / f"dude_target_{dude_target}.csv"
+        if skip_existing and target_output_file.exists():
+            print(
+                f"Found existing {target_output_file}, skipping due to skip_existing = True, rerun as False to regenerate"
+            )
+        actives = pd.read_csv(
+            self.dude_unprocessed_path / Path(dude_target) / actives_file,
+            sep=seperator,
+            header=None,
+            names=["SMILES", "DUDEID", "CHEMBLID"],
+        )
+        actives["Active"] = 1
+        decoys = pd.read_csv(
+            self.dude_unprocessed_path / Path(dude_target) / decoys_file,
+            sep=seperator,
+            header=None,
+            names=["SMILES", "DUDEID"],
+        )
+        decoys["Active"] = 0
+        df = pd.concat([actives, decoys]).reset_index().drop(columns="index")
+        df["rdkit_canonical_smiles"] = tqdm(
+            mp.Pool(
+                initializer=self._parallel_init_worker_desc_gen_shared_fepops_ob
+            ).imap(self._parallel_get_rdkit_cansmi, df.SMILES, chunksize=100),
+            desc=f"Generating {dude_target} benchmark file",
+            total=len(df),
+        )
+        df.to_csv(target_output_file, index=False)
+
+    def cache_mols_from_csv(
+        self,
+        csv_path: Union[Path, str],
+        rdkit_canonical_smiles_column_header: str = "rdkit_canonical_smiles",
+    ):
+        """Cache mols from a CSV into a db for faster recall later
+
+        Parameters
+        ----------
+        csv_path : Union[Path, str]
+            Path of CSV file. If None, then all CSV files in the DUDE datasets
+            processed path are used.
+        rdkit_canonical_smiles_column_header : str, optional
+            _description_, by default "rdkit_canonical_smiles"
+        """
+
+        from .fepops_persistent import get_persistent_fepops_storage_object
+
+        for csv_path in (
+            [Path(csv_path)]
+            if csv_path is not None
+            else self.dude_processed_path.glob("dude_target_*.csv")
+        ):
+            df = pd.read_csv(csv_path)
+            if df[rdkit_canonical_smiles_column_header].isnull().values.any():
+                print(
+                    f"Whilst working on caching {csv_path}, the following mol rows did not contain RDKit canonical SMILES:"
+                )
+                print(df[df[rdkit_canonical_smiles_column_header].isnull()])
+            smiles = [
+                s
+                for s in df[rdkit_canonical_smiles_column_header].tolist()
+                if not pd.isnull(s)
+            ]
+            with get_persistent_fepops_storage_object(csv_path.with_suffix(".db")) as f:
+                f.save_descriptors(smiles)
