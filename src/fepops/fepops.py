@@ -49,15 +49,15 @@ class Fepops:
         massive numbers of tautomers, this should be None implying that no limit should
         be placed on tautomer generation. By default None
     num_fepops_per_mol : int, optional
-            Number of feature points to use in the representation of a molecule.
-            Literature notes that 7 has been empirically found to be a good number of
-            feature points for performant representations of small molecules. This might
-            be increased if you are dealing with large and very flexible molecules. By
-            default 7
+        Number of feature points to use in the representation of a molecule.
+        Literature notes that 7 has been empirically found to be a good number of
+        feature points for performant representations of small molecules. This might
+        be increased if you are dealing with large and very flexible molecules. By
+        default 7
     num_centroids_per_fepop : int, optional
-            Each fepop is represented by a number of centres, into which atom properties
-            are compressed. Literature notes that this has been empirically determined
-            to be 4 for a performant representation of small molecules. By default 4
+        Each fepop is represented by a number of centres, into which atom properties
+        are compressed. Literature notes that this has been empirically determined
+        to be 4 for a performant representation of small molecules. By default 4
 
     Raises
     ------
@@ -67,13 +67,39 @@ class Fepops:
 
     def __init__(
         self,
-        kmeans_method: Literal['sklearn', 'pytorch-cpu', 'pytorch-gpu'] = 'sklearn',
         *,
+        kmeans_method: Literal['sklearn', 'pytorchcpu', 'pytorchgpu'] = 'sklearn',
         max_tautomers: Optional[int] = None,
         num_fepops_per_mol: int = 7,
         num_centroids_per_fepop: int = 4,
+        descriptor_scaling_method: Literal[
+            'standard_scaler_fepops',
+            'standard_scalar_fepop',
+            'standard_scalar_fepops_across_mols',
+            'standard_scalar_fepops_across_library',
+            'softmax_scaler_fepops',
+            'softmax_scalar_fepop',
+            'softmax_scalar_fepops_across_mols',
+            'softmax_scalar_fepops_across_library',
+            'best_dude_derived_weights',
+        ] = "standard_scaler_fepops",
     ):
-        self.implemented_kmeans_methods = ["sklearn", "pytorch-cpu", "pytorch-gpu"]
+        try:
+            self.kmeans_func = getattr(self, f"_perform_kmeans_{kmeans_method}")
+        except:
+            raise ValueError(
+                f"Supplied kmeans_method argument ({kmeans_method}) does not match a callable method of the form (_perfom_kmeans_{kmeans_method}). Implemented methods seem to be: {[m for m in Fepops.__dict__.keys() if m.startswith('_perform_kmeans_')]}"
+            )
+
+        try:
+            self.descriptor_scalar_func = getattr(
+                self, f"_perform_descriptor_scaling_{descriptor_scaling_method}"
+            )
+        except:
+            raise ValueError(
+                f"Supplied descriptor_scaling_method argument ({descriptor_scaling_method}) does not match a callable method of the form (_perform_descriptor_scaling_{kmeans_method}). Implemented methods seem to be: {[m for m in Fepops.__dict__.keys() if m.startswith('_perform_descriptor_scaling_')]}"
+            )
+
         self.sort_by_features_col_index_dict = {
             name: sort_order_index
             for sort_order_index, name in enumerate(["charge", "logP", "hba", "hbd"])
@@ -91,11 +117,7 @@ class Fepops:
         self.rotatable_bond_from_smarts = Chem.MolFromSmarts(
             "[!$(*#*)&!D1]-&!@[!$(*#*)&!D1]"
         )
-        if kmeans_method not in self.implemented_kmeans_methods:
-            raise ValueError(
-                f"Supplied argument kmeans_method '{kmeans_method}' not found, please supply a string denoting an implemented kmeans method from {self.implemented_kmeans_methods}"
-            )
-        self.kmeans_method_str = kmeans_method
+
         self.tautomer_enumerator = MolStandardize.tautomer.TautomerEnumerator(
             **{"max_tautomers": max_tautomers} if max_tautomers is not None else {}
         )
@@ -238,11 +260,10 @@ class Fepops:
                 dihedrals.append((atom_i, atom_j, atom_k, atom_l))
         return dihedrals
 
-    def _perform_kmeans(
+    def _perform_kmeans_sklearn(
         self,
         atom_coords: np.ndarray,
         num_centroids: int = 4,
-        kmeans_method: str = "pytorch-cpu",
         seed: int = 42,
     ) -> tuple:
         """Perform kmeans calculation
@@ -255,9 +276,6 @@ class Fepops:
             A Numpy array containing the 3D coordinates of a molecule.
         num_centroids : int
             The number of centoids used for clustering. By default 4.
-        kmeans_method : str
-            Method used to perform the kmeans calculation. Can be 'sklearn',
-            'pytorch-cpu' or 'pytorch-gpu'. By default 'pytorch-cpu'.
         seed : int
             Seed for sklearn kmeans initialisation. By default 42.
 
@@ -266,32 +284,82 @@ class Fepops:
         tuple
             A tuple containing the centroid coordinates and the cluster labels of molecular atoms.
         """
-        if kmeans_method == "sklearn":
-            kmeans = _SKLearnKMeans(
-                n_clusters=num_centroids,
-                random_state=seed,
-                n_init="auto",
-            ).fit(atom_coords)
-            centroid_coors = kmeans.cluster_centers_
-            instance_cluster_labels = kmeans.labels_
-        elif kmeans_method.startswith("pytorch"):
-            torch.manual_seed(seed)
-            mol_coors_torch = torch.from_numpy(atom_coords).to(
-                "cuda" if kmeans_method.endswith("gpu") else "cpu"
-            )
-            kmeans = _FastPTKMeans(n_clusters=num_centroids, max_iter=300)
-            instance_cluster_labels = kmeans.fit_predict(
-                mol_coors_torch,
-                centroids=torch.tensor(
-                    atom_coords[:num_centroids], device=mol_coors_torch.device
-                ),
-            ).numpy()
-            centroid_coors = kmeans.centroids.numpy()
-        else:
-            raise ValueError(
-                f"The method selected for the k-means calculation is invalid, please use one of {self.implemented_kmeans_methods}"
-            )
-        return centroid_coors, instance_cluster_labels
+        kmeans = _SKLearnKMeans(
+            n_clusters=num_centroids,
+            random_state=seed,
+            n_init="auto",
+        ).fit(atom_coords)
+        centroid_coords = kmeans.cluster_centers_
+        instance_cluster_labels = kmeans.labels_
+        return centroid_coords, instance_cluster_labels
+
+    def _perform_kmeans_pytorchcpu(
+        self,
+        atom_coords: np.ndarray,
+        num_centroids: int = 4,
+        seed: int = 42,
+    ) -> tuple:
+        """Perform kmeans calculation using pytorch (CPU only)
+
+        Parameters
+        ----------
+        atom_coords : ndarray
+            A Numpy array containing the 3D coordinates of a molecule.
+        num_centroids : int
+            The number of centoids used for clustering. By default 4.
+        seed : int
+            Seed for sklearn kmeans initialisation. By default 42.
+
+        Returns
+        -------
+        tuple
+            A tuple containing the centroid coordinates and the cluster labels of molecular atoms.
+        """
+        torch.manual_seed(seed)
+        mol_coors_torch = torch.from_numpy(atom_coords)
+        kmeans = _FastPTKMeans(n_clusters=num_centroids, max_iter=300)
+        instance_cluster_labels = kmeans.fit_predict(
+            mol_coors_torch,
+            centroids=torch.tensor(
+                atom_coords[:num_centroids], device=mol_coors_torch.device
+            ),
+        ).numpy()
+        centroid_coords = kmeans.centroids.numpy()
+        return centroid_coords, instance_cluster_labels
+
+    def _perform_kmeans_pytorchgpu(
+        self,
+        atom_coords: np.ndarray,
+        num_centroids: int = 4,
+        seed: int = 42,
+    ) -> tuple:
+        """Perform kmeans calculation using pytorch (gpu accelerated)
+
+        Parameters
+        ----------
+        atom_coords : ndarray
+            A Numpy array containing the 3D coordinates of a molecule.
+        num_centroids : int
+            The number of centoids used for clustering. By default 4.
+        seed : int
+            Seed for sklearn kmeans initialisation. By default 42.
+
+        Returns
+        -------
+        tuple
+            A tuple containing the centroid coordinates and the cluster labels of molecular atoms.
+        """
+        torch.manual_seed(seed)
+        mol_coors_torch = torch.from_numpy(atom_coords).to("cuda")
+        kmeans = _FastPTKMeans(n_clusters=num_centroids, max_iter=300)
+        instance_cluster_labels = kmeans.fit_predict(
+            mol_coors_torch,
+            centroids=torch.tensor(
+                atom_coords[:num_centroids], device=mol_coors_torch.device
+            ),
+        ).numpy()
+        centroid_coords = kmeans.centroids.numpy()
+        return centroid_coords, instance_cluster_labels
 
     def _get_centroid_distances(
         self, centroid_coords_or_distmat: np.ndarray, is_distance_matrix: bool
@@ -527,7 +595,6 @@ class Fepops:
     def get_centroid_pharmacophoric_features(
         self,
         mol: Chem.rdchem.Mol,
-        kmeans_method_str: str,
     ) -> np.ndarray:
         """Obtain the four centroids and their corresponding pharmacophoric features
 
@@ -546,10 +613,9 @@ class Fepops:
         np.ndarray
             A Numpy array containing 22 pharmacophoric features for all conformers.
         """
-        centroid_coords, instance_cluster_labels = self._perform_kmeans(
+        centroid_coords, instance_cluster_labels = self.kmeans_func(
             mol.GetConformer(0).GetPositions(),
             num_centroids=self.num_centroids_per_fepop,
-            kmeans_method=kmeans_method_str,
         )
 
         atomic_logP_dict = self._calculate_atomic_logPs(mol)
@@ -655,10 +721,7 @@ class Fepops:
         try:
             pharmacophore_feature_all_confs = np.array(
                 [
-                    self.get_centroid_pharmacophoric_features(
-                        each_mol,
-                        kmeans_method_str=self.kmeans_method_str,
-                    )
+                    self.get_centroid_pharmacophoric_features(each_mol)
                     for each_mol in each_mol_with_all_confs_list
                 ]
             )
@@ -706,12 +769,39 @@ class Fepops:
             )
         )
 
+    def _perform_descriptor_scaling_standard_scaler_fepops(x1, x2):
+        return (x1 - x1.mean()) / x1.std(), (x2 - x2.mean()) / x2.std()
+
+    def _perform_descriptor_scaling_standard_scalar_fepop(x1, x2):
+        raise NotImplementedError()
+
+    def _perform_descriptor_scaling_standard_scalar_fepops_across_mols(x1, x2):
+        raise NotImplementedError()
+
+    def _perform_descriptor_scaling_standard_scalar_fepops_across_library(x1, x2):
+        raise NotImplementedError()
+
+    def _perform_descriptor_scaling_softmax_scaler_fepops(x1, x2):
+        raise NotImplementedError()
+
+    def _perform_descriptor_scaling_softmax_scalar_fepop(x1, x2):
+        raise NotImplementedError()
+
+    def _perform_descriptor_scaling_softmax_scalar_fepops_across_mols(x1, x2):
+        raise NotImplementedError()
+
+    def _perform_descriptor_scaling_softmax_scalar_fepops_across_library(x1, x2):
+        raise NotImplementedError()
+
+    def _perform_descriptor_scaling_best_dude_derived_weights(x1, x2):
+        raise NotImplementedError()
+
     def _score_combialign(self, x1: np.ndarray, x2: np.ndarray):
         """Score fepops using CombiAlign
 
         Instead of sorting feature points by charge, this algorithm matches 2
         sets of medoids by holding one set constant and enumerating all
-        permutations of the other, and performing pearson correlation calculations
+        permutations of the other and performing pearson correlation calculations
         in a row-pairwise manner.  The highest summed correlation score permutation
         is then used for the second set, and scoring proceeds using softmax of the
         full fepops descriptors and the pearson correlation coefficient between
@@ -798,18 +888,9 @@ class Fepops:
 
         # Reform x2 with reordered medoids and medoid distances
         x2 = np.hstack([x2_desc[[best_permutaion]].flatten(), distances])
-        # Apply softmax and return pearson correlation between the two
 
-        # return np.corrcoef(softmax(x1), softmax(x2))[0, 1]
-        # return np.corrcoef(x1, x2)[0, 1]
-        # x1 = self.scaler.fit_transform(x1.reshape(-1, 1))
-        # x2 = self.scaler.fit_transform(x2.reshape(-1, 1))
-        return self.pairwise_correlation(
-            (x1 - x1.mean()) / x1.std(), (x2 - x2.mean()) / x2.std()
-        )
-        # return np.corrcoef(x1.flatten(), x2.flatten())[0, 1]
-        # A= [0.4, 0.6]
-        # SoftA = []
+        # Apply requested scaling and return pearson correlation between the two
+        return self.pairwise_correlation(self.descriptor_scalar_func(x1, x2))
 
     def _init_worker_calc_similarity(self, query_descriptors_, candidate_descriptors_):
         global shared_query_descriptors, shared_candidate_descriptors
