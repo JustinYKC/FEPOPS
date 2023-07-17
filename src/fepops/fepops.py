@@ -34,13 +34,13 @@ class Fepops:
     ----------
     kmeans_method : str, optional
         String literal denoting the method which should be used for kmeans calculations.
-        May be one of "sklearn", "pytorch-gpu", or "pytorch-cpu". If "sklearn" is passed
+        May be one of "sklearn", "pytorchgpu", or "pytorchcpu". If "sklearn" is passed
         then Scikit-learn's kmeans implementation is used. However a faster
         implementation from the fast_pytorch_kmeans package can also be used if Pytorch
         is available and may be run in cpu-only mode, or GPU accelerated mode. Note:
         GPU accelerated mode should only be used if you are stretching the capabilities
         in terms of feature points for large molecules.  Small molecules will not
-        benefit from GPU acceleration due to overheads.  By default "pytorch-cpu"
+        benefit from GPU acceleration due to overheads.  By default "pytorchcpu"
     max_tautomers : Optional[int], optional
         Maximum number of tautomers which should be generated. Internally, this
         implementation of FEPOPS relies upon RDKit's TautomerEnumerator to generate
@@ -88,7 +88,7 @@ class Fepops:
             self.kmeans_func = getattr(self, f"_perform_kmeans_{kmeans_method}")
         except:
             raise ValueError(
-                f"Supplied kmeans_method argument ({kmeans_method}) does not match a callable method of the form (_perfom_kmeans_{kmeans_method}). Implemented methods seem to be: {[m for m in Fepops.__dict__.keys() if m.startswith('_perform_kmeans_')]}"
+                f"Supplied kmeans_method argument ({kmeans_method}) does not match a callable method of the form (_perfom_kmeans_{kmeans_method}). Implemented methods seem to be: {[m.split('_')[3] for m in Fepops.__dict__.keys() if m.startswith('_perform_kmeans_')]}"
             )
 
         try:

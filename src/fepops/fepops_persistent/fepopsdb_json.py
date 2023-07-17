@@ -13,7 +13,7 @@ class FepopsDBJSON(FepopsPersistentAbstractBaseClass):
     def __init__(
         self,
         database_file: Union[str, Path],
-        kmeans_method: str = "pytorch-cpu",
+        kmeans_method: str = "sklearn",
         parallel: bool = True,
         n_jobs: int = -1,
     ):

@@ -49,8 +49,8 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
             File to use for persistent storage.
     kmeans_method : str, optional
             Method which should be used for kmeans calculation by
-            fepops objects, can be one of "sklearn", "pytorch-gpu",
-            or "pytorch-cpu".
+            fepops objects, can be one of "sklearn", "pytorchgpu",
+            or "pytorchcpu".
     parallel : bool, optional
             Run in parallel (using joblib), by default True
     n_jobs : int, optional
@@ -84,7 +84,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
     def __init__(
         self,
         database_file: Union[str, Path],
-        kmeans_method: str = "pytorch-cpu",
+        kmeans_method: str = "sklearn",
         parallel: bool = True,
         n_jobs: int = -1,
     ):
