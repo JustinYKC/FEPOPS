@@ -163,7 +163,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
     ) -> None:
         if not isinstance(smiles, (str, Chem.rdchem.Mol, np.ndarray)):
             raise ValueError(
-                f"Expected an rdkit canonical smiles string, rdkit mol, or a numpy array of descriptors but a {type(smiles)} was passed"
+                f"Expected an rdkit canonical smiles string, rdkit mol, or a numpy array of descriptors but a {type(smiles)} was passed: {smiles}"
             )
 
     @abstractmethod
