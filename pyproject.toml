@@ -1,7 +1,7 @@
 [project]
-name="Fepops"
+name="fepops"
 version="1.4.0"
-description="Python implementation of the FEPOPS molecular descriptors"
+description="OpenFEPOPS; A Python implementation of the FEPOPS molecular similarity method"
 authors = [
     {name = "Yan-Kai Chen"},
     {name = "Steven Shave"},
@@ -21,7 +21,6 @@ requires=[
     "scipy>=1.7.0",
     "fast_pytorch_kmeans>=0.1.9",
     "tqdm>=4.48.0",
-    "rdkit",
     ]
 build-backend="setuptools.build_meta"
 

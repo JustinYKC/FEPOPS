@@ -2,7 +2,7 @@ import time
 import numpy as np
 from sklearn.datasets import make_classification
 from tqdm import tqdm
-from fepops import Fepops
+from fepops import OpenFEPOPS
 from dataclasses import dataclass
 from typing import Callable, Union, Optional
 from pathlib import Path
@@ -12,7 +12,8 @@ from rdkit.Chem import AllChem
 from rdkit.Chem import DataStructs
 from rdkit.Chem.MolStandardize import rdMolStandardize
 from sklearn.metrics import roc_auc_score
-from fepops.fepops_persistent import get_persistent_fepops_storage_object
+import fepops.fepops_persistent
+#from fepops.fepops_persistent import get_persistent_fepops_storage_object
 from typing import Union, Optional
 
 
@@ -267,7 +268,7 @@ class FepopsBenchmarker:
 
         Contains test data useful in assessing the peformance of the FEPOPS object
         """
-        self.fepops = get_persistent_fepops_storage_object(database_file=database_file)
+        self.fepops = fepops_persistent.get_persistent_fepops_storage_object(database_file=database_file)
 
     def get_1k_x_1024_fepops(self):
         n_useful_features = 22
@@ -315,7 +316,7 @@ class FepopsBenchmarker:
             f"Median time to compute medoids with sklearn from 1024 fepops={np.median(timings)}, mean={np.mean(timings)}"
         )
 
-    def kmeans(self, kmeans_method:str="sklearn"):
+    def kmeans(self, kmeans_method: str = "sklearn"):
         """Benchmark kmedoid code using the standard classification dataset
 
         All benchmarks run using github codepace running Python 3.10.9 on a
@@ -326,7 +327,7 @@ class FepopsBenchmarker:
         1024 fepops.
 
         """
-        fepops_sklearn = Fepops(kmeans_method=kmeans_method)
+        fepops_sklearn = OpenFEPOPS(kmeans_method=kmeans_method)
 
         cached_1k_1024_fepops = self.get_1k_x_1024_fepops()
         timings = np.empty(cached_1k_1024_fepops.shape[0])
@@ -338,12 +339,15 @@ class FepopsBenchmarker:
             f"Median time to compute kmeans with sklearn from 1024 fepops={np.median(timings)}, mean={np.mean(timings)}"
         )
 
-        fepops_ptcpu = Fepops(kmeans_method=kmeans_method)
+        fepops_ptcpu = OpenFEPOPS(kmeans_method=kmeans_method)
 
         timings = np.empty(cached_1k_1024_fepops.shape[0])
         for i, f_1024 in enumerate(tqdm(cached_1k_1024_fepops, "Benchmarking")):
             start = time.time()
-            fepops_ptcpu.kmeans_func(f_1024, 7,)
+            fepops_ptcpu.kmeans_func(
+                f_1024,
+                7,
+            )
             timings[i] = time.time() - start
         print(
             f"Median time to compute kmeans with sklearn from 1024 fepops={np.median(timings)}, mean={np.mean(timings)}"
