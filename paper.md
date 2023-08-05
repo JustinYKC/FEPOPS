@@ -22,7 +22,7 @@ authors:
     affiliation: 1
 affiliations:
   - name: School of Biological Sciences, University of Edinburgh, The King’s Buildings, Max Born Crescent, CH Waddington Building, Edinburgh, EH9 3BF, U.K.
-   index: 1
+    index: 1
 date: 6 August 2023
 bibliography: paper.bib
 
