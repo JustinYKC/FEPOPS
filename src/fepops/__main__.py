@@ -1,5 +1,7 @@
 import numpy as np
 import fire
+from pathlib import Path
+from typing import Union
 from .fepops import OpenFEPOPS, GetFepopStatusCode
 from .fepops_persistent import get_persistent_fepops_storage_object
 
@@ -74,13 +76,11 @@ class FepopsCMDLineInterface:
         """Access functions for preparation and benchmarking of the DUDE dataset
 
         The DUDE dataset consists of 102 targets, 22,886 active compounds along with
-        decoys. More information is available here:
-        https://dude.docking.org/
-
+        decoys, bringing the total number of molecules to 1,434,022.
+        More information is available here: https://dude.docking.org/
         """
         from .dude_preprocessor import DudePreprocessor
 
-        print("Dude DIR========", dude_directory)
         dude_preprop = DudePreprocessor(dude_directory=dude_directory)
         return dude_preprop
 

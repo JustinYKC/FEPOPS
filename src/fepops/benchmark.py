@@ -315,7 +315,7 @@ class FepopsBenchmarker:
             f"Median time to compute medoids with sklearn from 1024 fepops={np.median(timings)}, mean={np.mean(timings)}"
         )
 
-    def kmeans(self, kmeans_method:str="sklearn"):
+    def kmeans(self, kmeans_method: str = "sklearn"):
         """Benchmark kmedoid code using the standard classification dataset
 
         All benchmarks run using github codepace running Python 3.10.9 on a
@@ -343,7 +343,10 @@ class FepopsBenchmarker:
         timings = np.empty(cached_1k_1024_fepops.shape[0])
         for i, f_1024 in enumerate(tqdm(cached_1k_1024_fepops, "Benchmarking")):
             start = time.time()
-            fepops_ptcpu.kmeans_func(f_1024, 7,)
+            fepops_ptcpu.kmeans_func(
+                f_1024,
+                7,
+            )
             timings[i] = time.time() - start
         print(
             f"Median time to compute kmeans with sklearn from 1024 fepops={np.median(timings)}, mean={np.mean(timings)}"

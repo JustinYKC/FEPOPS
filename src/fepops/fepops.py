@@ -72,32 +72,63 @@ class OpenFEPOPS:
         max_tautomers: Optional[int] = None,
         num_fepops_per_mol: int = 7,
         num_centroids_per_fepop: int = 4,
-        descriptor_scaling_method: Literal[
-            'standard_scaler_fepops',
-            'standard_scalar_fepop',
-            'standard_scalar_fepops_across_mols',
-            'standard_scalar_fepops_across_library',
-            'softmax_scaler_fepops',
-            'softmax_scalar_fepop',
-            'softmax_scalar_fepops_across_mols',
-            'softmax_scalar_fepops_across_library',
-            'best_dude_derived_weights',
-        ] = "standard_scaler_fepops",
+        descriptor_means: Tuple[float, ...] = (
+            -0.28932319,
+            0.5166312,
+            0.37458883,
+            0.99913668,
+            -0.04193182,
+            1.03616917,
+            0.27327129,
+            0.99839024,
+            0.09701198,
+            1.12969387,
+            0.23718642,
+            0.99865705,
+            0.35968991,
+            0.6649304,
+            0.4123743,
+            0.99893657,
+            5.70852885,
+            6.3707943,
+            6.47354071,
+            6.26385429,
+            6.19229367,
+            6.22946713,
+        ),
+        descriptor_stds: Tuple[float, ...] = (
+            0.35067291,
+            1.00802116,
+            0.48380817,
+            0.02926675,
+            0.15400475,
+            0.86220776,
+            0.44542581,
+            0.03999429,
+            0.16085455,
+            0.92042695,
+            0.42515847,
+            0.03655217,
+            0.35778578,
+            1.36108994,
+            0.49210665,
+            0.03252466,
+            1.96446927,
+            2.30792259,
+            2.5024708,
+            2.4155645,
+            2.29434487,
+            2.31437527,
+        ),
     ):
+        self.descriptor_means = descriptor_means
+        self.descriptor_stds = descriptor_stds
+
         try:
             self.kmeans_func = getattr(self, f"_perform_kmeans_{kmeans_method}")
         except:
             raise ValueError(
                 f"Supplied kmeans_method argument ({kmeans_method}) does not match a callable method of the form (_perfom_kmeans_{kmeans_method}). Implemented methods seem to be: {[m.split('_')[3] for m in OpenFEPOPS.__dict__.keys() if m.startswith('_perform_kmeans_')]}"
-            )
-
-        try:
-            self.descriptor_scalar_func = getattr(
-                self, f"_perform_descriptor_scaling_{descriptor_scaling_method}"
-            )
-        except:
-            raise ValueError(
-                f"Supplied descriptor_scaling_method argument ({descriptor_scaling_method}) does not match a callable method of the form (_perform_descriptor_scaling_{kmeans_method}). Implemented methods seem to be: {[m for m in OpenFEPOPS.__dict__.keys() if m.startswith('_perform_descriptor_scaling_')]}"
             )
 
         self.sort_by_features_col_index_dict = {
@@ -769,141 +800,6 @@ class OpenFEPOPS:
             )
         )
 
-    def _perform_descriptor_scaling_standard_scaler_fepops(x1, x2):
-        return (x1 - x1.mean()) / x1.std(), (x2 - x2.mean()) / x2.std()
-
-    def _perform_descriptor_scaling_standard_scalar_fepop(x1, x2):
-        raise NotImplementedError()
-
-    def _perform_descriptor_scaling_standard_scalar_fepops_across_mols(x1, x2):
-        raise NotImplementedError()
-
-    def _perform_descriptor_scaling_standard_scalar_fepops_across_library(x1, x2):
-        raise NotImplementedError()
-
-    def _perform_descriptor_scaling_softmax_scaler_fepops(x1, x2):
-        raise NotImplementedError()
-
-    def _perform_descriptor_scaling_softmax_scalar_fepop(x1, x2):
-        raise NotImplementedError()
-
-    def _perform_descriptor_scaling_softmax_scalar_fepops_across_mols(x1, x2):
-        raise NotImplementedError()
-
-    def _perform_descriptor_scaling_softmax_scalar_fepops_across_library(x1, x2):
-        raise NotImplementedError()
-
-    def _perform_descriptor_scaling_best_dude_derived_weights(x1, x2):
-        raise NotImplementedError()
-
-    def _score_combialign(self, x1: np.ndarray, x2: np.ndarray):
-        """Score fepops using CombiAlign
-
-        Instead of sorting feature points by charge, this algorithm matches 2
-        sets of medoids by holding one set constant and enumerating all
-        permutations of the other and performing pearson correlation calculations
-        in a row-pairwise manner.  The highest summed correlation score permutation
-        is then used for the second set, and scoring proceeds using softmax of the
-        full fepops descriptors and the pearson correlation coefficient between
-        them.
-
-        The CombiAlign algorithm as defined in Nettles, James H., et al. "Flexible
-        3D pharmacophores as descriptors of dynamic biological space." Journal of
-        Molecular Graphics and Modelling 26.3 (2007): 622-633.
-
-        Parameters
-        ----------
-        x1 : np.ndarray
-            Query fepop
-        x2 : np.ndarray
-            Candidate fepop
-
-        Returns
-        -------
-        float
-            Fepops score, higher is better. 1 is the maximum.
-        """
-        x1_desc = x1[: -self.num_distances_per_fepop].reshape(
-            self.num_centroids_per_fepop, self.num_features_per_fepop
-        )
-        x2_desc = x2[: -self.num_distances_per_fepop].reshape(
-            self.num_centroids_per_fepop, self.num_features_per_fepop
-        )
-        x2_dists = x2[-self.num_distances_per_fepop :]
-
-        permutation_tuples = list(
-            itertools.permutations(range(self.num_centroids_per_fepop))
-        )
-
-        # Vectorised correlation coefficient calculations performed in numpy,
-        # calculating all 24 permutations and the best fit (highest sum
-        # correlation) used as the best fepop ordering of centroids.
-        # This is magnitudes faster than a previous approach taken whereby
-        # numpy corrcoef was run many times and resulted in extremely slow
-        # scoring code. The folowing blog post helped immesely with this
-        # code:
-        # https://waterprogramming.wordpress.com/2014/06/13/numpy-vectorized-correlation-coefficient/
-
-        # Make mega block of fepops for x2, containing all perturbations
-        x2_mega_desc = x2_desc[permutation_tuples]
-        x1_mean = x1_desc.mean(axis=-2)
-        # As all permutations give the same mean (of columns/features),
-        # just do the first.
-        x2_mean = x2_mega_desc[0].mean(axis=-2)
-        x1_residual = x1_desc - x1_mean
-        x2_residual = x2_mega_desc - x2_mean
-        numerator = np.sum(x1_residual * x2_residual, axis=-1)
-        denominator = np.sqrt(
-            np.sum(x1_residual**2, axis=-1)
-            * np.sum((x2_mega_desc - x2_mean) ** 2, axis=-1)
-        )
-        best_permutaion = permutation_tuples[
-            np.argmax(np.sum(numerator / denominator, axis=-1))
-        ]
-
-        # Rebuild x2 distances to squareform matrix, then reorder as per the best permutation and extract in required FEPOPS order.
-        dmat = np.zeros((self.num_centroids_per_fepop, self.num_centroids_per_fepop))
-
-        dmat[0, -1] = x2_dists[0]
-        dist_position = 1
-        for offset in range(1, self.num_centroids_per_fepop - 1):
-            num_in_diagonal = self.num_centroids_per_fepop - offset
-            dmat += np.diag(
-                x2_dists[dist_position : dist_position + num_in_diagonal], k=offset
-            )
-            dist_position += num_in_diagonal
-        # Not required, but for completeness, copy upper triangle to lower
-        # triangle of dmat matrix
-        dmat = dmat + dmat.T - np.diag(np.diag(dmat))
-
-        # Reorder the distance matrix using best permutation
-
-        new_dmat = np.zeros_like(dmat)
-        for i, p in enumerate(best_permutaion):
-            for j in range(dmat.shape[0]):
-                if i == j:
-                    continue
-                new_dmat[i, j] = dmat[p, best_permutaion[j]]
-        distances = self._get_centroid_distances(new_dmat, is_distance_matrix=True)
-
-        # Reform x2 with reordered medoids and medoid distances
-        x2 = np.hstack([x2_desc[[best_permutaion]].flatten(), distances])
-
-        # Apply requested scaling and return pearson correlation between the two
-        return self.pairwise_correlation(self.descriptor_scalar_func(x1, x2))
-
-    def _init_worker_calc_similarity(self, query_descriptors_, candidate_descriptors_):
-        global shared_query_descriptors, shared_candidate_descriptors
-        shared_query_descriptors = query_descriptors_
-        shared_candidate_descriptors = candidate_descriptors_
-
-    def _work_calc_similarity(self, candidate_descriptor_i):
-        global shared_query_descriptors, shared_candidate_descriptors
-        return self.calc_similarity(
-            shared_query_descriptors,
-            shared_candidate_descriptors[candidate_descriptor_i],
-        )
-
     def calc_similarity(
         self,
         query: Union[np.ndarray, str, None],
@@ -911,7 +807,8 @@ class OpenFEPOPS:
     ) -> float:
         """Calculate FEPOPS similarity
 
-        Method for calculating molecular similarity based on their FEPOPS descriptors.
+        Method for calculating molecular similarity based on their OpenFEPOPS descriptors.
+        Centres and scales FEPOPS descriptors using parameters passed upon initialisation.
 
         Parameters
         ----------
@@ -932,27 +829,32 @@ class OpenFEPOPS:
         float
             Fepops similarity between two molecules
         """
+
         if not isinstance(query, np.ndarray):
             query_status, query = self.get_fepops(query)
             if query_status != GetFepopStatusCode.SUCCESS:
                 return np.nan
 
         if isinstance(candidate, list):
-            shared_queue = SimpleQueue()
             scores = []
-            with mp.Pool(
-                initializer=self._init_worker_calc_similarity,
-                initargs=(query, candidate),
-            ) as pool:
-                parallel_results = list(
-                    pool.imap(self._work_calc_similarity, (range(len(candidate))))
-                )
-            return parallel_results
+            for c in candidate:
+                self.scores.append(self.calc_similarity(query, c))
+            return scores
         if not isinstance(candidate, np.ndarray):
             candidate_status, candidate = self.get_fepops(candidate)
             if candidate_status != GetFepopStatusCode.SUCCESS:
                 return np.nan
-        return np.max(cdist(query, candidate, metric=self._score_combialign))
+
+        if not isinstance(query, np.ndarray):
+            raise ValueError("query was not, or could not be coerced into a np.ndarray")
+        if not isinstance(candidate, np.ndarray):
+            raise ValueError(
+                "candidate was not, or could not be coerced into a np.ndarray"
+            )
+        q = np.nan_to_num(((query - self.descriptor_means) / self.descriptor_stds),nan=1e-9)
+        c = np.nan_to_num((candidate - self.descriptor_means) / self.descriptor_stds, nan=1e-9)
+        print(self.pairwise_correlation(q.flatten(),c.flatten()).shape)
+        return self.pairwise_correlation(q.flatten(), c.flatten())
 
     def __call__(
         self,
