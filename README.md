@@ -1,14 +1,14 @@
-# FEPOPS(feature point pharmacophores)
-Python implementation of the FEPOPS molecular similarity method and descriptor generator. The FEPOPS descriptors is a 3D method of molecular representation by four centroids with five pharmacophoric features (i.e. atomic logP, atomic partial charges, hydrogen bond acceptors, hydrogen bond donors, and 6 distances between the four centroids). This implementation was recreated following the original paper: [https://pubs.acs.org/doi/10.1021/jm049654z](https://pubs.acs.org/doi/10.1021/jm049654z)
+# OpenFEPOPS(FEature POint PharmacophoreS)
 
-### Steps for implementation:
-1. Preprocessing: Molecules were filtered by the number of atoms (< 4), the number of rings (> 9), and the number of rotatable bonds (< 40). A salt/ions filter was then applied. Filtering carried out using `mol_filter.py`.
-2. Tautomer enumeration: Tautomers for each molecule were enumerated and saved as mol objects (codes in `fepops.py`).
-3. Sample conformers through rotation of flexible bonds: Each tautomer underwent conformer generation, changing the angles of all rotatable bonds. Up to 1024 conformers are sampled from the pool of conformers if more than 5 rotatable bonds are found in a molecule (codes in `fepops.py`).
-4. Calculate the 4 centroids: 4 centroids were calculated using K-means for each sampled conformer. With these 4 centroids, each conformer was represented as a 4-point molecular representation with each atom clustered into one of these 4 centroid groups (codes in `fepops.py`).
-5. Calculate and assign pharmacophoric features: Each of the four centroids was assigned five pharmacophoric features from their atom cluster members (codes in `fepops.py`).
-6. Select most representitive conformers: The FEPOPS conformers were further clustered by k-medoids to find a small number of representative conformers for each molecule (codes in `fepops.py`).
-7. Calculate FEPOPS similarity: The FEPOPS similarity between two molecules is measured by Pearson correlation between two FEPOPS descriptors after transformation of each to sum to zero and have a variance of 1 (codes in `fepops.py`). 
+OpenFEPOPS is an open-source Python implementation of the FEPOPS molecular similarity technique enabling descriptor generation, comparison, and ranking of molecules in virtual screening campaigns. The central idea behind FEPOPS is reducing the complexity of molecules by merging of local atomic environments and atom properties into ‘feature points’. This compressed feature point representation has been used to great effect as noted in literature, helping researchers identify active and potentially therapeutically valuable small molecules. This implementation was recreated following the original paper: [https://pubs.acs.org/doi/10.1021/jm049654z](https://pubs.acs.org/doi/10.1021/jm049654z). By default, OpenFEPOPS uses literature reported parameters which show good performance in retrieval of active lead- and drug-like small molecules within virtual screening campaigns, with feature points capturing charge, lipophilicity, and hydrogen bond acceptor and donor status. When run with default parameters, OpenFepops compactly represents molecules using sets of four feature points, with each feature point encoded into 22 numeric values, resulting in a compact representation of 616 bytes per molecule. By extension, this allows the indexing of a compound archive containing 1 million small molecules using only 587.5 MB of data. Whilst more compact representations are readily available, the FEPOPS technique strives to capture tautomer and conformer information, first through enumeration and then through diversity driven selection of representative FEPOPS descriptors to capture the diverse states that a molecule may adopt.
+
+At the time of writing, `OpenFEPOPS` is the only publicly available implementation of the FEPOPS molecular similarity technique. Whilst used within industry and referenced extensively in literature, it has been unavailable to researchers as an open-source tool. This truly open implementation allows researchers to use and contribute to the advancement of FEPOPS within the rapid development and collaborative framework provided by open-source software. It is therefore hoped that this will allow the technique to be used not only for traditional small molecule molecular similarity, but also in new emerging fields such as protein design and featurization of small- and macromolecules for both predictive and generative tasks.
+
+
+The OpenFEPOPS descriptor generation process as outlined in \autoref{fig:descriptor_generation} follows; for a given small molecule, OpenFEPOPS iterates over tautomers and conformers, picking four (by default) K-mean derived points, into which the atomic information of neighbouring atoms is collapsed. As standard, the atomic properties of charge, logP, hydrogen bond donor, and hydrogen bond acceptor status are collapsed into four feature points per unique tautomer conformation. These feature points are encoded to 22 numeric values (a FEPOP) comprising four points, each with four properties, and six pairwise distances between these points. With four FEPOPS representing every enumerated conformer for every enumerated tautomer of a molecule, this set of representative FEPOPS should capture every possible state of the original molecule. From this list, the K-medoid algorithm is applied to identify seven diverse FEPOPS which are thought to capture a fuzzy representation of the molecule using seven FEPOPS comprising 22 descriptors each, totalling 154 32-bit floating point numbers or 616 bytes.
+
+OpenFEPOPS has been uploaded to the Python Packaging Index under the name 'fepops' and as such is installable using the pip package manager and the command 'pip install fepops'. With the package installed, entrypoints are used to expose commonly used OpenFEPOPS tasks such as descriptor generation and calculation on molecular similarity, enabling simple command line access without the need to explicitly invoke a Python interpreter. Whilst OpenFEPOPS may be used solely via the command line interface, a robust API is available and may be used within other programs or integrated into existing pipelines to enable more complex workflows.  Extensive documentation is available online.
+
 
 # Requirements
 This FEPOPS implementation requires the following packages:
@@ -24,17 +24,12 @@ This FEPOPS implementation requires the following packages:
 # Usage
 A quickstart example to generate the FEPOPS descriptors for a molecule directly from its SMILES as follows: In terminal:
 ```
-python fepops.py get_fepops -ismi "O=C1OC2=CC3(C)C(CC4OC(=O)C(OC(=O)C)C5C6(OCC45C3C(O)C6O)C(=O)OC)C(C2=C1)C" 
+fepops get_fepops -ismi "O=C1OC2=CC3(C)C(CC4OC(=O)C(OC(=O)C)C5C6(OCC45C3C(O)C6O)C(=O)OC)C(C2=C1)C" 
 ```
 
 A quickstart example to calculate the FEPOPS similarity between two molecules using their SMILES as follows: In terminal:
 ```
-python fepops.py calc_sim -ismi1 "O=C1OC2=CC3(C)C(CC4OC(=O)C(OC(=O)C)C5C6(OCC45C3C(O)C6O)C(=O)OC)C(C2=C1)C" -ismi2 "OC=1C=C(O)C=C(C1)C=2OC=3C=CC=CC3C2"
-```
-
-An example of filtering molecules in the dataset of natural products: `COCONUT.DB.smi` [COCONUT.DB.smi](https://coconut.naturalproducts.net/download), for further use of the FEPOPS generation:
-```
-python mol_filter.py
+python fepops.py calc_sim "O=C1OC2=CC3(C)C(CC4OC(=O)C(OC(=O)C)C5C6(OCC45C3C(O)C6O)C(=O)OC)C(C2=C1)C" "OC=1C=C(O)C=C(C1)C=2OC=3C=CC=CC3C2"
 ```
 
 This implementation is also importable and callable within custom scripts for the FEPOPS generation of a batch of molecules. For example:

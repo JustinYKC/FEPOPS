@@ -12,7 +12,8 @@ from rdkit.Chem import AllChem
 from rdkit.Chem import DataStructs
 from rdkit.Chem.MolStandardize import rdMolStandardize
 from sklearn.metrics import roc_auc_score
-from fepops.fepops_persistent import get_persistent_fepops_storage_object
+import fepops.fepops_persistent
+#from fepops.fepops_persistent import get_persistent_fepops_storage_object
 from typing import Union, Optional
 
 
@@ -267,7 +268,7 @@ class FepopsBenchmarker:
 
         Contains test data useful in assessing the peformance of the FEPOPS object
         """
-        self.fepops = get_persistent_fepops_storage_object(database_file=database_file)
+        self.fepops = fepops_persistent.get_persistent_fepops_storage_object(database_file=database_file)
 
     def get_1k_x_1024_fepops(self):
         n_useful_features = 22
