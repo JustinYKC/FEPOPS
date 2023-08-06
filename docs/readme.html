@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>&lt;no title&gt; &mdash; OpenFEPOPS 1.4.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            OpenFEPOPS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul class="simple">
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">OpenFEPOPS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">&lt;no title&gt;</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/readme.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <p># OpenFEPOPS(FEature POint PharmacophoreS)</p>
+<p>OpenFEPOPS is an open-source Python implementation of the FEPOPS molecular similarity technique enabling descriptor generation, comparison, and ranking of molecules in virtual screening campaigns. The central idea behind FEPOPS is reducing the complexity of molecules by merging of local atomic environments and atom properties into ‘feature points’. This compressed feature point representation has been used to great effect as noted in literature, helping researchers identify active and potentially therapeutically valuable small molecules. This implementation was recreated following the original paper: [<a class="reference external" href="https://pubs.acs.org/doi/10.1021/jm049654z](https://pubs.acs.org/doi/10.1021/jm049654z">https://pubs.acs.org/doi/10.1021/jm049654z](https://pubs.acs.org/doi/10.1021/jm049654z</a>). By default, OpenFEPOPS uses literature reported parameters which show good performance in retrieval of active lead- and drug-like small molecules within virtual screening campaigns, with feature points capturing charge, lipophilicity, and hydrogen bond acceptor and donor status. When run with default parameters, OpenFepops compactly represents molecules using sets of four feature points, with each feature point encoded into 22 numeric values, resulting in a compact representation of 616 bytes per molecule. By extension, this allows the indexing of a compound archive containing 1 million small molecules using only 587.5 MB of data. Whilst more compact representations are readily available, the FEPOPS technique strives to capture tautomer and conformer information, first through enumeration and then through diversity driven selection of representative FEPOPS descriptors to capture the diverse states that a molecule may adopt.</p>
+<p>At the time of writing, <cite>OpenFEPOPS</cite> is the only publicly available implementation of the FEPOPS molecular similarity technique. Whilst used within industry and referenced extensively in literature, it has been unavailable to researchers as an open-source tool. This truly open implementation allows researchers to use and contribute to the advancement of FEPOPS within the rapid development and collaborative framework provided by open-source software. It is therefore hoped that this will allow the technique to be used not only for traditional small molecule molecular similarity, but also in new emerging fields such as protein design and featurization of small- and macromolecules for both predictive and generative tasks.</p>
+<p>The OpenFEPOPS descriptor generation process as outlined in autoref{fig:descriptor_generation} follows; for a given small molecule, OpenFEPOPS iterates over tautomers and conformers, picking four (by default) K-mean derived points, into which the atomic information of neighbouring atoms is collapsed. As standard, the atomic properties of charge, logP, hydrogen bond donor, and hydrogen bond acceptor status are collapsed into four feature points per unique tautomer conformation. These feature points are encoded to 22 numeric values (a FEPOP) comprising four points, each with four properties, and six pairwise distances between these points. With four FEPOPS representing every enumerated conformer for every enumerated tautomer of a molecule, this set of representative FEPOPS should capture every possible state of the original molecule. From this list, the K-medoid algorithm is applied to identify seven diverse FEPOPS which are thought to capture a fuzzy representation of the molecule using seven FEPOPS comprising 22 descriptors each, totalling 154 32-bit floating point numbers or 616 bytes.</p>
+<p>OpenFEPOPS has been uploaded to the Python Packaging Index under the name ‘fepops’ and as such is installable using the pip package manager and the command ‘pip install fepops’. With the package installed, entrypoints are used to expose commonly used OpenFEPOPS tasks such as descriptor generation and calculation on molecular similarity, enabling simple command line access without the need to explicitly invoke a Python interpreter. Whilst OpenFEPOPS may be used solely via the command line interface, a robust API is available and may be used within other programs or integrated into existing pipelines to enable more complex workflows.  Extensive documentation is available online.</p>
+<p># Requirements
+This FEPOPS implementation requires the following packages:
+- rdkit (&gt;=2019.09.x.x)
+- numpy (&gt;=1.19.x)
+- pandas (&gt;=1.5.0)
+- scikit-learn (&gt;=0.20.x)
+- scipy (&gt;=1.7.x)
+- PyTorch (&gt;=1.0.0)
+- fast-pytorch-kmeans (&gt;=0.1.9)
+- tqdm (&gt;=4.48.0)</p>
+<p># Usage
+A quickstart example to generate the FEPOPS descriptors for a molecule directly from its SMILES as follows: In terminal:
+<code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">fepops</span> <span class="pre">get_fepops</span> <span class="pre">-ismi</span> <span class="pre">&quot;O=C1OC2=CC3(C)C(CC4OC(=O)C(OC(=O)C)C5C6(OCC45C3C(O)C6O)C(=O)OC)C(C2=C1)C&quot;</span>
+<span class="pre">`</span></code></p>
+<p>A quickstart example to calculate the FEPOPS similarity between two molecules using their SMILES as follows: In terminal:
+<code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">python</span> <span class="pre">fepops.py</span> <span class="pre">calc_sim</span> <span class="pre">&quot;O=C1OC2=CC3(C)C(CC4OC(=O)C(OC(=O)C)C5C6(OCC45C3C(O)C6O)C(=O)OC)C(C2=C1)C&quot;</span> <span class="pre">&quot;OC=1C=C(O)C=C(C1)C=2OC=3C=CC=CC3C2&quot;</span>
+<span class="pre">`</span></code></p>
+<p>This implementation is also importable and callable within custom scripts for the FEPOPS generation of a batch of molecules. For example:
+<a href="#id1"><span class="problematic" id="id2">``</span></a>`
+import sys
+from rdkit import Chem
+from fepops import Fepops
+from io import StringIO</p>
+<p>smiles_input_file_path = “./COCONUT_after_filter.smi”
+sio = sys.stderr = StringIO()
+f = Fepops()
+with open(smiles_input_file_path) as in_file:</p>
+<blockquote>
+<div><dl>
+<dt>for line in in_file:</dt><dd><p>parts = line.strip().split(”t”)
+id = parts[-1].strip()
+smiles = parts[0].strip()
+print (f”{id}, {smiles}:”)
+mol = Chem.MolFromSmiles(smiles)
+err = sio.getvalue()
+if err:</p>
+<blockquote>
+<div><p>sio = sys.stderr = StringIO()
+if “Explicit valence” in err:</p>
+<blockquote>
+<div><p>print (f”# {id} Bad_valencen”)
+continue</p>
+</div></blockquote>
+<dl class="simple">
+<dt>elif “SMILES Parse Error” in err:</dt><dd><p>print (f”# {id} SMILES_parse_errorn”)
+continue</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>fepops_features = f.get_fepops(smiles)
+print (f”{fepops_features}n”)</p>
+</dd>
+</dl>
+</div></blockquote>
+<p><a href="#id3"><span class="problematic" id="id4">``</span></a><a href="#id5"><span class="problematic" id="id6">`</span></a></p>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Yan-Kai Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

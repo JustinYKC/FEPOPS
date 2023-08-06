@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>fepops.fepops_persistent package &mdash; OpenFEPOPS 1.4.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            OpenFEPOPS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">fepops.fepops_persistent package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-fepops.fepops_persistent.fepops_persistent_abc">fepops.fepops_persistent.fepops_persistent_abc module</a><ul>
+<li><a class="reference internal" href="#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass"><code class="docutils literal notranslate"><span class="pre">FepopsPersistentAbstractBaseClass</span></code></a><ul>
+<li><a class="reference internal" href="#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.add_fepop"><code class="docutils literal notranslate"><span class="pre">FepopsPersistentAbstractBaseClass.add_fepop()</span></code></a></li>
+<li><a class="reference internal" href="#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.calc_similarity"><code class="docutils literal notranslate"><span class="pre">FepopsPersistentAbstractBaseClass.calc_similarity()</span></code></a></li>
+<li><a class="reference internal" href="#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.fepop_exists"><code class="docutils literal notranslate"><span class="pre">FepopsPersistentAbstractBaseClass.fepop_exists()</span></code></a></li>
+<li><a class="reference internal" href="#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.get_cansmi_to_mol_dict_not_in_database"><code class="docutils literal notranslate"><span class="pre">FepopsPersistentAbstractBaseClass.get_cansmi_to_mol_dict_not_in_database()</span></code></a></li>
+<li><a class="reference internal" href="#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.get_fepops"><code class="docutils literal notranslate"><span class="pre">FepopsPersistentAbstractBaseClass.get_fepops()</span></code></a></li>
+<li><a class="reference internal" href="#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.save_descriptors"><code class="docutils literal notranslate"><span class="pre">FepopsPersistentAbstractBaseClass.save_descriptors()</span></code></a></li>
+<li><a class="reference internal" href="#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.write"><code class="docutils literal notranslate"><span class="pre">FepopsPersistentAbstractBaseClass.write()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-fepops.fepops_persistent.fepopsdb_json">fepops.fepops_persistent.fepopsdb_json module</a><ul>
+<li><a class="reference internal" href="#fepops.fepops_persistent.fepopsdb_json.FepopsDBJSON"><code class="docutils literal notranslate"><span class="pre">FepopsDBJSON</span></code></a><ul>
+<li><a class="reference internal" href="#fepops.fepops_persistent.fepopsdb_json.FepopsDBJSON.add_fepop"><code class="docutils literal notranslate"><span class="pre">FepopsDBJSON.add_fepop()</span></code></a></li>
+<li><a class="reference internal" href="#fepops.fepops_persistent.fepopsdb_json.FepopsDBJSON.fepop_exists"><code class="docutils literal notranslate"><span class="pre">FepopsDBJSON.fepop_exists()</span></code></a></li>
+<li><a class="reference internal" href="#fepops.fepops_persistent.fepopsdb_json.FepopsDBJSON.get_fepops"><code class="docutils literal notranslate"><span class="pre">FepopsDBJSON.get_fepops()</span></code></a></li>
+<li><a class="reference internal" href="#fepops.fepops_persistent.fepopsdb_json.FepopsDBJSON.write"><code class="docutils literal notranslate"><span class="pre">FepopsDBJSON.write()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-fepops.fepops_persistent.fepopsdb_sqlite">fepops.fepops_persistent.fepopsdb_sqlite module</a><ul>
+<li><a class="reference internal" href="#fepops.fepops_persistent.fepopsdb_sqlite.FepopsDBSqlite"><code class="docutils literal notranslate"><span class="pre">FepopsDBSqlite</span></code></a><ul>
+<li><a class="reference internal" href="#fepops.fepops_persistent.fepopsdb_sqlite.FepopsDBSqlite.add_fepop"><code class="docutils literal notranslate"><span class="pre">FepopsDBSqlite.add_fepop()</span></code></a></li>
+<li><a class="reference internal" href="#fepops.fepops_persistent.fepopsdb_sqlite.FepopsDBSqlite.fepop_exists"><code class="docutils literal notranslate"><span class="pre">FepopsDBSqlite.fepop_exists()</span></code></a></li>
+<li><a class="reference internal" href="#fepops.fepops_persistent.fepopsdb_sqlite.FepopsDBSqlite.get_fepops"><code class="docutils literal notranslate"><span class="pre">FepopsDBSqlite.get_fepops()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-fepops.fepops_persistent.utils">fepops.fepops_persistent.utils module</a><ul>
+<li><a class="reference internal" href="#fepops.fepops_persistent.utils.get_persistent_fepops_storage_object"><code class="docutils literal notranslate"><span class="pre">get_persistent_fepops_storage_object()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-fepops.fepops_persistent">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">OpenFEPOPS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">fepops.fepops_persistent package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/source/fepops.fepops_persistent.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="fepops-fepops-persistent-package">
+<h1>fepops.fepops_persistent package<a class="headerlink" href="#fepops-fepops-persistent-package" title="Permalink to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this heading"></a></h2>
+</section>
+<section id="module-fepops.fepops_persistent.fepops_persistent_abc">
+<span id="fepops-fepops-persistent-fepops-persistent-abc-module"></span><h2>fepops.fepops_persistent.fepops_persistent_abc module<a class="headerlink" href="#module-fepops.fepops_persistent.fepops_persistent_abc" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">fepops.fepops_persistent.fepops_persistent_abc.</span></span><span class="sig-name descname"><span class="pre">FepopsPersistentAbstractBaseClass</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmeans_method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'sklearn'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Abstract base class for persistent fepops storage</p>
+<p>New storage methods may be implemented as demonstrated in fepopsdb_json.py
+by extending this abstract base class which provides some required
+functionality like:</p>
+<ul class="simple">
+<li><p>save_descriptors(smiles: Union[str, Path, list[str]]), to save a smiles file/list of smiles to the persistent storage</p></li>
+<li><p>get_cansmi_to_mol_dict_not_in_database(smiles: Union[str, Path, list[str]]), to retrieve a unique dictionary with canonical smiles as keys not already stored in the database and rdkit mol objects as values.</p></li>
+</ul>
+<p>When writing your own persistent storage methods, you must override the following methods:</p>
+<section id="add-fepop-rdkit-canonical-smiles-str-fepops-np-ndarray">
+<h3>add_fepop(rdkit_canonical_smiles: str, fepops: np.ndarray)<a class="headerlink" href="#add-fepop-rdkit-canonical-smiles-str-fepops-np-ndarray" title="Permalink to this heading"></a></h3>
+<p>Add the fepop to persistent storage. super().add_fepop may be called by the overridden function to perform type checks on arguments.</p>
+</section>
+<section id="fepop-exists-rdkit-canonical-smiles-str">
+<h3>fepop_exists(rdkit_canonical_smiles: str)<a class="headerlink" href="#fepop-exists-rdkit-canonical-smiles-str" title="Permalink to this heading"></a></h3>
+<p>Return True if the canonical smiles is already in the database, and False if not. super().fepop_exists may be called by the overridden
+function to perform type checks on arguments.</p>
+</section>
+<section id="get-fepops-rdkit-canonical-smiles-str">
+<h3>get_fepops(rdkit_canonical_smiles: str)<a class="headerlink" href="#get-fepops-rdkit-canonical-smiles-str" title="Permalink to this heading"></a></h3>
+<p>Return a fepop from persistent storage. If it does not exist, then generate it by calling self.fepops_object.get_fepops which is supplied
+by this base class. super().get_fepops may be called by the overridden function to perform type checks on arguments.
+With this function in place it allows interface compatibility with a standard Fepops object.</p>
+<p>Inheriting functions may also define __enter__ and __exit__ methods for use with context handlers. If none are defined, then empty ones
+are provided. This can be useful in doing things like writing out large files after descriptor generation if incremental writes are not
+possible, like in the case of the FepopsDBJSON child class.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>database_file</strong> (<em>Union[str, Path]</em>) – File to use for persistent storage.</p></li>
+<li><p><strong>kmeans_method</strong> (<em>str, optional</em>) – Method which should be used for kmeans calculation by
+fepops objects, can be one of “sklearn”, “pytorchgpu”,
+or “pytorchcpu”.</p></li>
+<li><p><strong>parallel</strong> (<em>bool, optional</em>) – Run in parallel (using joblib), by default True</p></li>
+<li><p><strong>n_jobs</strong> (<em>int, optional</em>) – Number of jobs to be spawned with joblib. If -1, then use
+all available cores. By default -1.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.add_fepop">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">add_fepop</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rdkit_canonical_smiles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fepops</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.add_fepop" title="Permalink to this definition"></a></dt>
+<dd><p>Add canonical smiles and fepop to database.</p>
+<p>Must be overridden</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.calc_similarity">
+<span class="sig-name descname"><span class="pre">calc_similarity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fepops_features_1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fepops_features_2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_canonical</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.calc_similarity" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate FEPOPS similarity</p>
+<p>A static method for calculating molecular similarity based on their FEPOPS descriptors.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fepops_features_1</strong> (<em>Union[np.ndarray, str, None]</em>) – A Numpy array containing the FEPOPS descriptors of the query molecule
+or a smiles string from which to generate FEPOPS descriptors for the
+query molecule.</p></li>
+<li><p><strong>fepops_features_2</strong> (<em>Union[np.ndarray, str, None, list[np.ndarray, str, None]]</em>) – A Numpy array containing the FEPOPS descriptors of the candidate
+molecule or a smiles string from which to generate FEPOPS descriptors
+for the candidate molecule.  Can also be None, in which case, np.nan is
+returned as a score, or a list of any of these. If it is a list,
+then a list of scores against the single candidate is returned.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Fepops similarity between two molecules</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.fepop_exists">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">fepop_exists</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rdkit_canonical_smiles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.fepop_exists" title="Permalink to this definition"></a></dt>
+<dd><p>Return True if canonical smiles already exist in the database</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.get_cansmi_to_mol_dict_not_in_database">
+<span class="sig-name descname"><span class="pre">get_cansmi_to_mol_dict_not_in_database</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">smiles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smiles_guaranteed_rdkit_canonical</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.get_cansmi_to_mol_dict_not_in_database" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.get_fepops">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_fepops</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">smiles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Mol</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_canonical</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.get_fepops" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.save_descriptors">
+<span class="sig-name descname"><span class="pre">save_descriptors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">smiles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_failures_to_database</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smiles_guaranteed_rdkit_canonical</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fepops_object_constructor_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.save_descriptors" title="Permalink to this definition"></a></dt>
+<dd><p>Pregenerate FEPOPS descriptors for a set of SMILES strings</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.write">
+<span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.write" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+</dd></dl>
+
+</section>
+<section id="module-fepops.fepops_persistent.fepopsdb_json">
+<span id="fepops-fepops-persistent-fepopsdb-json-module"></span><h2>fepops.fepops_persistent.fepopsdb_json module<a class="headerlink" href="#module-fepops.fepops_persistent.fepopsdb_json" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="fepops.fepops_persistent.fepopsdb_json.FepopsDBJSON">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">fepops.fepops_persistent.fepopsdb_json.</span></span><span class="sig-name descname"><span class="pre">FepopsDBJSON</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmeans_method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'sklearn'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fepops.fepops_persistent.fepopsdb_json.FepopsDBJSON" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass" title="fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass"><code class="xref py py-class docutils literal notranslate"><span class="pre">FepopsPersistentAbstractBaseClass</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="fepops.fepops_persistent.fepopsdb_json.FepopsDBJSON.add_fepop">
+<span class="sig-name descname"><span class="pre">add_fepop</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rdkit_canonical_smiles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fepops</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fepops.fepops_persistent.fepopsdb_json.FepopsDBJSON.add_fepop" title="Permalink to this definition"></a></dt>
+<dd><p>Add canonical smiles and fepop to database.</p>
+<p>Must be overridden</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fepops.fepops_persistent.fepopsdb_json.FepopsDBJSON.fepop_exists">
+<span class="sig-name descname"><span class="pre">fepop_exists</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rdkit_canonical_smiles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#fepops.fepops_persistent.fepopsdb_json.FepopsDBJSON.fepop_exists" title="Permalink to this definition"></a></dt>
+<dd><p>Check if Fepop exists in the database</p>
+<p>If the fepops object was constructed with a database file, then
+query if the supplied canonical SMILES is included.  If no database
+is present, then False is returned, as if it is not included.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>rdkit_canonical_smiles</strong> (<em>str</em>) – Canonical smiles to check</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if the canonical smiles exists in the database</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fepops.fepops_persistent.fepopsdb_json.FepopsDBJSON.get_fepops">
+<span class="sig-name descname"><span class="pre">get_fepops</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">smiles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_canonical</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#fepops.fepops_persistent.fepopsdb_json.FepopsDBJSON.get_fepops" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fepops.fepops_persistent.fepopsdb_json.FepopsDBJSON.write">
+<span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#fepops.fepops_persistent.fepopsdb_json.FepopsDBJSON.write" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-fepops.fepops_persistent.fepopsdb_sqlite">
+<span id="fepops-fepops-persistent-fepopsdb-sqlite-module"></span><h2>fepops.fepops_persistent.fepopsdb_sqlite module<a class="headerlink" href="#module-fepops.fepops_persistent.fepopsdb_sqlite" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="fepops.fepops_persistent.fepopsdb_sqlite.FepopsDBSqlite">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">fepops.fepops_persistent.fepopsdb_sqlite.</span></span><span class="sig-name descname"><span class="pre">FepopsDBSqlite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmeans_method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'sklearn'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fepops.fepops_persistent.fepopsdb_sqlite.FepopsDBSqlite" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass" title="fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass"><code class="xref py py-class docutils literal notranslate"><span class="pre">FepopsPersistentAbstractBaseClass</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="fepops.fepops_persistent.fepopsdb_sqlite.FepopsDBSqlite.add_fepop">
+<span class="sig-name descname"><span class="pre">add_fepop</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rdkit_canonical_smiles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fepops</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fepops.fepops_persistent.fepopsdb_sqlite.FepopsDBSqlite.add_fepop" title="Permalink to this definition"></a></dt>
+<dd><p>Add canonical smiles and fepop to database.</p>
+<p>Must be overridden</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fepops.fepops_persistent.fepopsdb_sqlite.FepopsDBSqlite.fepop_exists">
+<span class="sig-name descname"><span class="pre">fepop_exists</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rdkit_canonical_smiles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#fepops.fepops_persistent.fepopsdb_sqlite.FepopsDBSqlite.fepop_exists" title="Permalink to this definition"></a></dt>
+<dd><p>Check if Fepop exists in the database</p>
+<p>If the fepops object was constructed with a database file, then
+query if the supplied canonical SMILES is included.  If no database
+is present, then False is returned, as if it is not included.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>rdkit_canonical_smiles</strong> (<em>str</em>) – Canonical smiles to check</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if supplied canonical smiles exists in the database</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fepops.fepops_persistent.fepopsdb_sqlite.FepopsDBSqlite.get_fepops">
+<span class="sig-name descname"><span class="pre">get_fepops</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">smiles</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_canonical</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#fepops.fepops_persistent.fepopsdb_sqlite.FepopsDBSqlite.get_fepops" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-fepops.fepops_persistent.utils">
+<span id="fepops-fepops-persistent-utils-module"></span><h2>fepops.fepops_persistent.utils module<a class="headerlink" href="#module-fepops.fepops_persistent.utils" title="Permalink to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="fepops.fepops_persistent.utils.get_persistent_fepops_storage_object">
+<span class="sig-prename descclassname"><span class="pre">fepops.fepops_persistent.utils.</span></span><span class="sig-name descname"><span class="pre">get_persistent_fepops_storage_object</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fepops.fepops_persistent.utils.get_persistent_fepops_storage_object" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-fepops.fepops_persistent">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-fepops.fepops_persistent" title="Permalink to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Yan-Kai Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
