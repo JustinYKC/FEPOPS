@@ -5,10 +5,9 @@
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
-import sys, os
 
-sys.path.insert(0, os.path.abspath('../src/'))
-
+import os, sys
+sys.path.insert(0, os.path.abspath("../src"))
 
 project = 'OpenFEPOPS'
 copyright = '2023, Yan-Kai Chen'
@@ -18,13 +17,7 @@ release = '1.4.0'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = [
-    'sphinx.ext.napoleon',
-]
- 
-napoleon_google_docstring = False
-napoleon_use_param = False
-napoleon_use_ivar = True
+extensions = ["sphinx.ext.todo", "sphinx.ext.viewcode", "sphinx.ext.autodoc"]
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
