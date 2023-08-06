@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>fepops.fepops &mdash; OpenFEPOPS 1.4.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            OpenFEPOPS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">fepops</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">OpenFEPOPS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">fepops.fepops</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for fepops.fepops</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">rdkit</span> <span class="kn">import</span> <span class="n">Chem</span>
+<span class="kn">from</span> <span class="nn">rdkit.Chem</span> <span class="kn">import</span> <span class="n">AllChem</span>
+<span class="kn">from</span> <span class="nn">rdkit.Chem</span> <span class="kn">import</span> <span class="n">MolStandardize</span>
+<span class="kn">from</span> <span class="nn">rdkit.Chem</span> <span class="kn">import</span> <span class="n">Crippen</span><span class="p">,</span> <span class="n">Lipinski</span>
+<span class="kn">from</span> <span class="nn">rdkit.Chem</span> <span class="kn">import</span> <span class="n">rdMolTransforms</span>
+<span class="kn">from</span> <span class="nn">sklearn.cluster</span> <span class="kn">import</span> <span class="n">KMeans</span> <span class="k">as</span> <span class="n">_SKLearnKMeans</span>
+<span class="kn">from</span> <span class="nn">fast_pytorch_kmeans</span> <span class="kn">import</span> <span class="n">KMeans</span> <span class="k">as</span> <span class="n">_FastPTKMeans</span>
+<span class="kn">from</span> <span class="nn">scipy.spatial.distance</span> <span class="kn">import</span> <span class="n">cdist</span><span class="p">,</span> <span class="n">squareform</span><span class="p">,</span> <span class="n">pdist</span>
+<span class="kn">from</span> <span class="nn">scipy.special</span> <span class="kn">import</span> <span class="n">softmax</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">itertools</span><span class="o">,</span> <span class="nn">zlib</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Literal</span>
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+<span class="kn">import</span> <span class="nn">multiprocessing</span> <span class="k">as</span> <span class="nn">mp</span>
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="kn">import</span> <span class="n">SimpleQueue</span>
+
+<span class="n">GetFepopStatusCode</span> <span class="o">=</span> <span class="n">Enum</span><span class="p">(</span>
+    <span class="s2">&quot;GetFepopStatusCode&quot;</span><span class="p">,</span>
+    <span class="p">[</span><span class="s2">&quot;SUCCESS&quot;</span><span class="p">,</span> <span class="s2">&quot;FAILED_TO_GENERATE&quot;</span><span class="p">,</span> <span class="s2">&quot;FAILED_TO_RETRIEVE&quot;</span><span class="p">,</span> <span class="s2">&quot;FAILED_RETRIEVED_NONE&quot;</span><span class="p">],</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="OpenFEPOPS"><a class="viewcode-back" href="../../fepops.html#fepops.fepops.OpenFEPOPS">[docs]</a><span class="k">class</span> <span class="nc">OpenFEPOPS</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fepops (Feature Points) molecular similarity object</span>
+
+<span class="sd">    Fepops allows the comparison of molecules using feature points, see the original</span>
+<span class="sd">    publication for more information: https://doi.org/10.1021/jm049654z. In short,</span>
+<span class="sd">    featurepoints reduce the number of points used to represent a molecule by combining</span>
+<span class="sd">    atoms and their properties. Typically used to compare libraries of small molecules</span>
+<span class="sd">    against known actives in the hope of discovering biosimilars based on queries.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    kmeans_method : str, optional</span>
+<span class="sd">        String literal denoting the method which should be used for kmeans calculations.</span>
+<span class="sd">        May be one of &quot;sklearn&quot;, &quot;pytorchgpu&quot;, or &quot;pytorchcpu&quot;. If &quot;sklearn&quot; is passed</span>
+<span class="sd">        then Scikit-learn&#39;s kmeans implementation is used. However a faster</span>
+<span class="sd">        implementation from the fast_pytorch_kmeans package can also be used if Pytorch</span>
+<span class="sd">        is available and may be run in cpu-only mode, or GPU accelerated mode. Note:</span>
+<span class="sd">        GPU accelerated mode should only be used if you are stretching the capabilities</span>
+<span class="sd">        in terms of feature points for large molecules.  Small molecules will not</span>
+<span class="sd">        benefit from GPU acceleration due to overheads.  By default &quot;pytorchcpu&quot;</span>
+<span class="sd">    max_tautomers : Optional[int], optional</span>
+<span class="sd">        Maximum number of tautomers which should be generated. Internally, this</span>
+<span class="sd">        implementation of FEPOPS relies upon RDKit&#39;s TautomerEnumerator to generate</span>
+<span class="sd">        tautomers and may optionally pass in a limit to the number of Tautomers to</span>
+<span class="sd">        generate. Unless the molecules (or macromolecules) you are working with generate</span>
+<span class="sd">        massive numbers of tautomers, this should be None implying that no limit should</span>
+<span class="sd">        be placed on tautomer generation. By default None</span>
+<span class="sd">    num_fepops_per_mol : int, optional</span>
+<span class="sd">        Number of feature points to use in the representation of a molecule.</span>
+<span class="sd">        Literature notes that 7 has been empirically found to be a good number of</span>
+<span class="sd">        feature points for performant representations of small molecules. This might</span>
+<span class="sd">        be increased if you are dealing with large and very flexible molecules. By</span>
+<span class="sd">        default 7</span>
+<span class="sd">    num_centroids_per_fepop : int, optional</span>
+<span class="sd">        Each fepop is represented by a number of centres, into which atom properties</span>
+<span class="sd">        are compressed. Literature notes that this has been empirically determined</span>
+<span class="sd">        to be 4 for a performant representation of small molecules. By default 4</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        Invalid kmeans method</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">kmeans_method</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;sklearn&#39;</span><span class="p">,</span> <span class="s1">&#39;pytorchcpu&#39;</span><span class="p">,</span> <span class="s1">&#39;pytorchgpu&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;sklearn&#39;</span><span class="p">,</span>
+        <span class="n">max_tautomers</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">num_fepops_per_mol</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">7</span><span class="p">,</span>
+        <span class="n">num_centroids_per_fepop</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="n">descriptor_means</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="o">-</span><span class="mf">0.28932319</span><span class="p">,</span>
+            <span class="mf">0.5166312</span><span class="p">,</span>
+            <span class="mf">0.37458883</span><span class="p">,</span>
+            <span class="mf">0.99913668</span><span class="p">,</span>
+            <span class="o">-</span><span class="mf">0.04193182</span><span class="p">,</span>
+            <span class="mf">1.03616917</span><span class="p">,</span>
+            <span class="mf">0.27327129</span><span class="p">,</span>
+            <span class="mf">0.99839024</span><span class="p">,</span>
+            <span class="mf">0.09701198</span><span class="p">,</span>
+            <span class="mf">1.12969387</span><span class="p">,</span>
+            <span class="mf">0.23718642</span><span class="p">,</span>
+            <span class="mf">0.99865705</span><span class="p">,</span>
+            <span class="mf">0.35968991</span><span class="p">,</span>
+            <span class="mf">0.6649304</span><span class="p">,</span>
+            <span class="mf">0.4123743</span><span class="p">,</span>
+            <span class="mf">0.99893657</span><span class="p">,</span>
+            <span class="mf">5.70852885</span><span class="p">,</span>
+            <span class="mf">6.3707943</span><span class="p">,</span>
+            <span class="mf">6.47354071</span><span class="p">,</span>
+            <span class="mf">6.26385429</span><span class="p">,</span>
+            <span class="mf">6.19229367</span><span class="p">,</span>
+            <span class="mf">6.22946713</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">descriptor_stds</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="mf">0.35067291</span><span class="p">,</span>
+            <span class="mf">1.00802116</span><span class="p">,</span>
+            <span class="mf">0.48380817</span><span class="p">,</span>
+            <span class="mf">0.02926675</span><span class="p">,</span>
+            <span class="mf">0.15400475</span><span class="p">,</span>
+            <span class="mf">0.86220776</span><span class="p">,</span>
+            <span class="mf">0.44542581</span><span class="p">,</span>
+            <span class="mf">0.03999429</span><span class="p">,</span>
+            <span class="mf">0.16085455</span><span class="p">,</span>
+            <span class="mf">0.92042695</span><span class="p">,</span>
+            <span class="mf">0.42515847</span><span class="p">,</span>
+            <span class="mf">0.03655217</span><span class="p">,</span>
+            <span class="mf">0.35778578</span><span class="p">,</span>
+            <span class="mf">1.36108994</span><span class="p">,</span>
+            <span class="mf">0.49210665</span><span class="p">,</span>
+            <span class="mf">0.03252466</span><span class="p">,</span>
+            <span class="mf">1.96446927</span><span class="p">,</span>
+            <span class="mf">2.30792259</span><span class="p">,</span>
+            <span class="mf">2.5024708</span><span class="p">,</span>
+            <span class="mf">2.4155645</span><span class="p">,</span>
+            <span class="mf">2.29434487</span><span class="p">,</span>
+            <span class="mf">2.31437527</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">descriptor_means</span> <span class="o">=</span> <span class="n">descriptor_means</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">descriptor_stds</span> <span class="o">=</span> <span class="n">descriptor_stds</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">kmeans_func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;_perform_kmeans_</span><span class="si">{</span><span class="n">kmeans_method</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Supplied kmeans_method argument (</span><span class="si">{</span><span class="n">kmeans_method</span><span class="si">}</span><span class="s2">) does not match a callable method of the form (_perfom_kmeans_</span><span class="si">{</span><span class="n">kmeans_method</span><span class="si">}</span><span class="s2">). Implemented methods seem to be: </span><span class="si">{</span><span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)[</span><span class="mi">3</span><span class="p">]</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">m</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">OpenFEPOPS</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">m</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;_perform_kmeans_&#39;</span><span class="p">)]</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sort_by_features_col_index_dict</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">name</span><span class="p">:</span> <span class="n">sort_order_index</span>
+            <span class="k">for</span> <span class="n">sort_order_index</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">([</span><span class="s2">&quot;charge&quot;</span><span class="p">,</span> <span class="s2">&quot;logP&quot;</span><span class="p">,</span> <span class="s2">&quot;hba&quot;</span><span class="p">,</span> <span class="s2">&quot;hbd&quot;</span><span class="p">])</span>
+        <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_fepops_per_mol</span> <span class="o">=</span> <span class="n">num_fepops_per_mol</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_centroids_per_fepop</span> <span class="o">=</span> <span class="n">num_centroids_per_fepop</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_features_per_fepop</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sort_by_features_col_index_dict</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_distances_per_fepop</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_centroids_per_fepop</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_centroids_per_fepop</span>
+        <span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">donor_mol_from_smarts</span> <span class="o">=</span> <span class="n">Chem</span><span class="o">.</span><span class="n">MolFromSmarts</span><span class="p">(</span><span class="s2">&quot;[!H0;#7,#8,#9]&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">acceptor_mol_from_smarts</span> <span class="o">=</span> <span class="n">Chem</span><span class="o">.</span><span class="n">MolFromSmarts</span><span class="p">(</span>
+            <span class="s2">&quot;[!$([#6,F,Cl,Br,I,o,s,nX3,#7v5,#15v5,#16v4,#16v6,*+1,*+2,*+3])]&quot;</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rotatable_bond_from_smarts</span> <span class="o">=</span> <span class="n">Chem</span><span class="o">.</span><span class="n">MolFromSmarts</span><span class="p">(</span>
+            <span class="s2">&quot;[!$(*#*)&amp;!D1]-&amp;!@[!$(*#*)&amp;!D1]&quot;</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">tautomer_enumerator</span> <span class="o">=</span> <span class="n">MolStandardize</span><span class="o">.</span><span class="n">tautomer</span><span class="o">.</span><span class="n">TautomerEnumerator</span><span class="p">(</span>
+            <span class="o">**</span><span class="p">{</span><span class="s2">&quot;max_tautomers&quot;</span><span class="p">:</span> <span class="n">max_tautomers</span><span class="p">}</span> <span class="k">if</span> <span class="n">max_tautomers</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">{}</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_k_medoids</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">input_x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">7</span><span class="p">,</span> <span class="n">random_state</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">42</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Select k Fepops from conformers</span>
+
+<span class="sd">        Gets k mediods from conformers (and tautomers) which are representative</span>
+<span class="sd">        of the molecule as a function of conformer and tautomer states by virtue</span>
+<span class="sd">        of chosen fepops being diverse.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        input_x : np.ndarray</span>
+<span class="sd">            The pharmacophore features of all conformers.</span>
+<span class="sd">        k : int</span>
+<span class="sd">            The number of medoids for clustering. By default 7.</span>
+<span class="sd">        random_state : int</span>
+<span class="sd">            Integer to use as a random state when seeding the random number</span>
+<span class="sd">            generator.  By default 42.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        np.ndarray</span>
+<span class="sd">            The final Fepops descriptors comprised of k representative</span>
+<span class="sd">            conformers/tautomers.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">input_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">input_x</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">input_x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">k</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">input_x</span>
+
+        <span class="n">point_to_centroid_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">input_x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">point_to_centroid_map_prev</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">point_to_centroid_map</span><span class="p">)</span>
+
+        <span class="n">np_rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="n">random_state</span><span class="p">)</span>
+        <span class="n">medoids</span> <span class="o">=</span> <span class="n">input_x</span><span class="p">[</span>
+            <span class="n">np_rng</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">input_x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">size</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span> <span class="p">:</span>
+        <span class="p">]</span>
+
+        <span class="k">while</span> <span class="p">(</span><span class="n">point_to_centroid_map</span> <span class="o">!=</span> <span class="n">point_to_centroid_map_prev</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="n">point_to_centroid_map_prev</span> <span class="o">=</span> <span class="n">point_to_centroid_map</span>
+            <span class="n">point_to_centroid_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">cdist</span><span class="p">(</span><span class="n">input_x</span><span class="p">,</span> <span class="n">medoids</span><span class="p">)),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">k</span><span class="p">):</span>
+                <span class="n">medoid_members</span> <span class="o">=</span> <span class="n">input_x</span><span class="p">[</span><span class="n">point_to_centroid_map</span> <span class="o">==</span> <span class="n">i</span><span class="p">]</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">medoid_members</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">chosen_x_point</span> <span class="o">=</span> <span class="n">np_rng</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">input_x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+                    <span class="n">medoids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">input_x</span><span class="p">[</span><span class="n">chosen_x_point</span><span class="p">,</span> <span class="p">:]</span>
+                    <span class="n">point_to_centroid_map</span><span class="p">[</span><span class="n">chosen_x_point</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+                <span class="n">medoids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">input_x</span><span class="p">[</span><span class="n">point_to_centroid_map</span> <span class="o">==</span> <span class="n">i</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="c1"># Sorting at this stage for reproducibility with existing pregenerated</span>
+        <span class="c1"># descriptor sets and convention with early fepops versions which relied</span>
+        <span class="c1"># upon fepops being sorted by charge (before moving to the newer CombiAlign</span>
+        <span class="c1"># scoring algorithm)</span>
+        <span class="k">return</span> <span class="n">medoids</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">lexsort</span><span class="p">(</span><span class="n">medoids</span><span class="o">.</span><span class="n">T</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])]</span>
+
+    <span class="k">def</span> <span class="nf">_calculate_atomic_logPs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mol</span><span class="p">:</span> <span class="n">Chem</span><span class="o">.</span><span class="n">rdchem</span><span class="o">.</span><span class="n">Mol</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate logP contribution for each of atom in a molecule</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        mol : Chem.rdchem.Mol</span>
+<span class="sd">            The Rdkit mol object of the input molecule.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            A dictionary containing all atom symbols with their logP values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="n">atom</span><span class="o">.</span><span class="n">GetIdx</span><span class="p">():</span> <span class="nb">float</span><span class="p">(</span><span class="n">contribution</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">atom</span><span class="p">,</span> <span class="n">contribution</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+                <span class="n">mol</span><span class="o">.</span><span class="n">GetAtoms</span><span class="p">(),</span> <span class="n">Crippen</span><span class="o">.</span><span class="n">rdMolDescriptors</span><span class="o">.</span><span class="n">_CalcCrippenContribs</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">_calculate_partial_charges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mol</span><span class="p">:</span> <span class="n">Chem</span><span class="o">.</span><span class="n">rdchem</span><span class="o">.</span><span class="n">Mol</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the charge of each atom in a molecule</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        mol : Chem.rdchem.Mol</span>
+<span class="sd">            The Rdkit mol object of the input molecule.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            A dictionary containing all atom symobls with their charges.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">Chem</span><span class="o">.</span><span class="n">rdPartialCharges</span><span class="o">.</span><span class="n">ComputeGasteigerCharges</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">throwOnParamFailure</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="n">atom</span><span class="o">.</span><span class="n">GetIdx</span><span class="p">():</span> <span class="nb">float</span><span class="p">(</span><span class="n">atom</span><span class="o">.</span><span class="n">GetProp</span><span class="p">(</span><span class="s2">&quot;_GasteigerCharge&quot;</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="n">mol</span><span class="o">.</span><span class="n">GetAtoms</span><span class="p">()</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">_sum_of_atomic_features_by_centroids</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">feature_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">centroid_atom_idx</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sum all atomic features according to their centroid group</span>
+
+<span class="sd">        A method that that is used to sum all the atomic features based on their centroid group.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        feature_dict : dict</span>
+<span class="sd">            A dictionary containing the atomic features.</span>
+<span class="sd">        centroid_atom_idx : np.ndarray</span>
+<span class="sd">            A Numpy array containing the label of the centroid index for each atom.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        int</span>
+<span class="sd">            Sum of the features across the centroid group of atoms.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">sum</span><span class="p">([</span><span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">feature_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">centroid_atom_idx</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">_get_dihedrals</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mol</span><span class="p">:</span> <span class="n">Chem</span><span class="o">.</span><span class="n">rdchem</span><span class="o">.</span><span class="n">Mol</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Identify dihedrals in order to obtain rotatable bonds in a molecule</span>
+
+<span class="sd">        Identify dihedrals using flanking atoms of rotatable bonds</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        mol : Chem.rdchem.Mol</span>
+<span class="sd">            The Rdkit mol object of the input molecule.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple</span>
+<span class="sd">            A tuple containing all identified dihedrals with the index of their four defined atoms.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dihedrals</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">atom_j</span><span class="p">,</span> <span class="n">atom_k</span> <span class="ow">in</span> <span class="n">mol</span><span class="o">.</span><span class="n">GetSubstructMatches</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rotatable_bond_from_smarts</span><span class="p">):</span>
+            <span class="n">atom_i</span><span class="p">,</span> <span class="n">atom_l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_flanking_atoms</span><span class="p">(</span><span class="n">mol</span><span class="o">.</span><span class="n">GetBonds</span><span class="p">(),</span> <span class="n">atom_j</span><span class="p">,</span> <span class="n">atom_k</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">atom_i</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">atom_l</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">dihedrals</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">atom_i</span><span class="p">,</span> <span class="n">atom_j</span><span class="p">,</span> <span class="n">atom_k</span><span class="p">,</span> <span class="n">atom_l</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">dihedrals</span>
+
+    <span class="k">def</span> <span class="nf">_perform_kmeans_sklearn</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">atom_coords</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">num_centroids</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">42</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Perform kmeans calculation</span>
+
+<span class="sd">        Carry out kmeans calcaultion based on a given kmeans method and number of centroids.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        atom_coords : ndarray</span>
+<span class="sd">            A Numpy array containing the 3D coordinates of a molecule.</span>
+<span class="sd">        num_centroids : int</span>
+<span class="sd">            The number of centoids used for clustering. By default 4.</span>
+<span class="sd">        seed : int</span>
+<span class="sd">            Seed for sklearn kmeans initialisation. By default 42.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple</span>
+<span class="sd">            A tuple containing the centroid coordinates and the cluster labels of molecular atoms.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">kmeans</span> <span class="o">=</span> <span class="n">_SKLearnKMeans</span><span class="p">(</span>
+            <span class="n">n_clusters</span><span class="o">=</span><span class="n">num_centroids</span><span class="p">,</span>
+            <span class="n">random_state</span><span class="o">=</span><span class="n">seed</span><span class="p">,</span>
+            <span class="n">n_init</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">atom_coords</span><span class="p">)</span>
+        <span class="n">centroid_coords</span> <span class="o">=</span> <span class="n">kmeans</span><span class="o">.</span><span class="n">cluster_centers_</span>
+        <span class="n">instance_cluster_labels</span> <span class="o">=</span> <span class="n">kmeans</span><span class="o">.</span><span class="n">labels_</span>
+        <span class="k">return</span> <span class="n">centroid_coords</span><span class="p">,</span> <span class="n">instance_cluster_labels</span>
+
+    <span class="k">def</span> <span class="nf">_perform_kmeans_pytorchcpu</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">atom_coords</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">num_centroids</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">42</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Perform kmeans calculation using pytorch (CPU only)</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        atom_coords : ndarray</span>
+<span class="sd">            A Numpy array containing the 3D coordinates of a molecule.</span>
+<span class="sd">        num_centroids : int</span>
+<span class="sd">            The number of centoids used for clustering. By default 4.</span>
+<span class="sd">        seed : int</span>
+<span class="sd">            Seed for sklearn kmeans initialisation. By default 42.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple</span>
+<span class="sd">            A tuple containing the centroid coordinates and the cluster labels of molecular atoms.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+        <span class="n">mol_coors_torch</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">atom_coords</span><span class="p">)</span>
+        <span class="n">kmeans</span> <span class="o">=</span> <span class="n">_FastPTKMeans</span><span class="p">(</span><span class="n">n_clusters</span><span class="o">=</span><span class="n">num_centroids</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+        <span class="n">instance_cluster_labels</span> <span class="o">=</span> <span class="n">kmeans</span><span class="o">.</span><span class="n">fit_predict</span><span class="p">(</span>
+            <span class="n">mol_coors_torch</span><span class="p">,</span>
+            <span class="n">centroids</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+                <span class="n">atom_coords</span><span class="p">[:</span><span class="n">num_centroids</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="n">mol_coors_torch</span><span class="o">.</span><span class="n">device</span>
+            <span class="p">),</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="n">centroid_coords</span> <span class="o">=</span> <span class="n">kmeans</span><span class="o">.</span><span class="n">centroids</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">centroid_coords</span><span class="p">,</span> <span class="n">instance_cluster_labels</span>
+
+    <span class="k">def</span> <span class="nf">_perform_kmeans_pytorchgpu</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">atom_coords</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">num_centroids</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">42</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Perform kmeans calculation using pytorch (gpu accelerated)</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        atom_coords : ndarray</span>
+<span class="sd">            A Numpy array containing the 3D coordinates of a molecule.</span>
+<span class="sd">        num_centroids : int</span>
+<span class="sd">            The number of centoids used for clustering. By default 4.</span>
+<span class="sd">        seed : int</span>
+<span class="sd">            Seed for sklearn kmeans initialisation. By default 42.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple</span>
+<span class="sd">            A tuple containing the centroid coordinates and the cluster labels of molecular atoms.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+        <span class="n">mol_coors_torch</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">atom_coords</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span>
+        <span class="n">kmeans</span> <span class="o">=</span> <span class="n">_FastPTKMeans</span><span class="p">(</span><span class="n">n_clusters</span><span class="o">=</span><span class="n">num_centroids</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+        <span class="n">instance_cluster_labels</span> <span class="o">=</span> <span class="n">kmeans</span><span class="o">.</span><span class="n">fit_predict</span><span class="p">(</span>
+            <span class="n">mol_coors_torch</span><span class="p">,</span>
+            <span class="n">centroids</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+                <span class="n">atom_coords</span><span class="p">[:</span><span class="n">num_centroids</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="n">mol_coors_torch</span><span class="o">.</span><span class="n">device</span>
+            <span class="p">),</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="n">centroid_coords</span> <span class="o">=</span> <span class="n">kmeans</span><span class="o">.</span><span class="n">centroids</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">centroid_coords</span><span class="p">,</span> <span class="n">instance_cluster_labels</span>
+
+    <span class="k">def</span> <span class="nf">_get_centroid_distances</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">centroid_coords_or_distmat</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">is_distance_matrix</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get centroid distances array</span>
+
+<span class="sd">        In the fepops paper using 4 centroids, there is a specific order in</span>
+<span class="sd">        which to return the 4 distances:</span>
+<span class="sd">        d1-4, d1-2, d2-3, d3-4, d1-3, d2-4.</span>
+<span class="sd">        This order is the same as the way matrix determinants are calculated,</span>
+<span class="sd">        and as such this function generalises to other cardinalities of points.</span>
+
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        centroid_coords : np.ndarray</span>
+<span class="sd">            MxN array of centroid coords, where M is the number of centroids,</span>
+<span class="sd">            and N is the number of coordinates (should be 3).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        np.ndarray</span>
+<span class="sd">            Ordered centroid distances</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_distance_matrix</span><span class="p">:</span>
+            <span class="n">dmat</span> <span class="o">=</span> <span class="n">squareform</span><span class="p">(</span><span class="n">pdist</span><span class="p">(</span><span class="n">centroid_coords_or_distmat</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dmat</span> <span class="o">=</span> <span class="n">centroid_coords_or_distmat</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">dmat</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+            <span class="o">+</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">dmat</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dmat</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)]</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">distances</span>
+
+    <span class="k">def</span> <span class="nf">_mol_from_smiles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">smiles_string</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Chem</span><span class="o">.</span><span class="n">rdchem</span><span class="o">.</span><span class="n">Mol</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Parse smiles to mol, catching errors</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        smiles_string : str</span>
+<span class="sd">            Smiles string</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Chem.rdchem.Mol</span>
+<span class="sd">            RDkit molecule</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            Unable to parse smiles into a molecule</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">mol</span> <span class="o">=</span> <span class="n">Chem</span><span class="o">.</span><span class="n">MolFromSmiles</span><span class="p">(</span><span class="n">smiles_string</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">mol</span> <span class="o">=</span> <span class="n">Chem</span><span class="o">.</span><span class="n">MolFromSmiles</span><span class="p">(</span><span class="n">smiles_string</span><span class="p">,</span> <span class="n">sanitize</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="sa">f</span><span class="s2">&quot;Could not parse smiles to a valid molecule, smiles was: </span><span class="si">{</span><span class="n">smiles_string</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">mol</span>
+
+    <span class="k">def</span> <span class="nf">_get_flanking_atoms</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">bonds</span><span class="p">:</span> <span class="n">Chem</span><span class="o">.</span><span class="n">rdchem</span><span class="o">.</span><span class="n">_ROBondSeq</span><span class="p">,</span> <span class="n">atom_1_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">atom_2_idx</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Search for two atoms connecting to either atom in a rotatable bond</span>
+
+<span class="sd">        A private method to identify two atoms flanking atoms in a rotatable bond</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        bonds : Chem.rdchem._ROBondSeq</span>
+<span class="sd">            The Rdkit molecule bond object that contains the indexes of both begin and end atoms in a bond.</span>
+<span class="sd">        atom_1_idx : int</span>
+<span class="sd">            The index of the first atom in a rotatable bond.</span>
+<span class="sd">        atom_2_inx : int</span>
+<span class="sd">            The index of the second atom in a rotatable bond.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple</span>
+<span class="sd">            A tuple containing the indexes of two flanking atoms for the given atoms of a rotatable bond.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">bound_to_atom_1</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">bound_to_atom_2</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">for</span> <span class="n">bond</span> <span class="ow">in</span> <span class="n">bonds</span><span class="p">:</span>
+            <span class="n">bond_indexes</span> <span class="o">=</span> <span class="n">bond</span><span class="o">.</span><span class="n">GetBeginAtomIdx</span><span class="p">(),</span> <span class="n">bond</span><span class="o">.</span><span class="n">GetEndAtomIdx</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">atom_1_idx</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">bond_indexes</span> <span class="ow">and</span> <span class="n">atom_2_idx</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">bond_indexes</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">atom_1_idx</span> <span class="ow">in</span> <span class="n">bond_indexes</span><span class="p">:</span>  <span class="c1"># Atom 1 in bond indexes</span>
+                <span class="k">if</span> <span class="n">atom_2_idx</span> <span class="ow">in</span> <span class="n">bond_indexes</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="n">atom_1_idx</span> <span class="o">==</span> <span class="n">bond_indexes</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                    <span class="n">bound_to_atom_1</span> <span class="o">=</span> <span class="n">bond_indexes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="n">atom_1_idx</span> <span class="o">==</span> <span class="n">bond_indexes</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+                    <span class="n">bound_to_atom_1</span> <span class="o">=</span> <span class="n">bond_indexes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="k">continue</span>
+            <span class="k">else</span><span class="p">:</span>  <span class="c1"># Atom 2 in bond indexes</span>
+                <span class="k">if</span> <span class="n">atom_2_idx</span> <span class="o">==</span> <span class="n">bond_indexes</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                    <span class="n">bound_to_atom_2</span> <span class="o">=</span> <span class="n">bond_indexes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="n">atom_2_idx</span> <span class="o">==</span> <span class="n">bond_indexes</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+                    <span class="n">bound_to_atom_2</span> <span class="o">=</span> <span class="n">bond_indexes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="k">continue</span>
+
+                <span class="k">if</span> <span class="n">bound_to_atom_1</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">bound_to_atom_2</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">bound_to_atom_1</span><span class="p">,</span> <span class="n">bound_to_atom_2</span>
+        <span class="k">return</span> <span class="n">bound_to_atom_1</span><span class="p">,</span> <span class="n">bound_to_atom_2</span>
+
+    <span class="k">def</span> <span class="nf">_sample_bond_states</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_rot</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sample a set of conformers with different rotation angles</span>
+
+<span class="sd">        A private method used to generate a set of bond angle multipliers (0 to 3) using</span>
+<span class="sd">        all rotatable bonds within a molecule. Up to 1024 conformers are sampled for a molecule if</span>
+<span class="sd">        n_rot is greater than five, otherwise all n_rot^4 are returned.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n_nor : int</span>
+<span class="sd">            The number of rotatable bonds in a molecule.</span>
+<span class="sd">        seed : int</span>
+<span class="sd">            Seed for random sampling of rotamer space. Typically the hash of molecule coords.</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        List</span>
+<span class="sd">            A list containing the sampled bond states (rotation angles) for all of the rotatable bonds of a molecule.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">n_rot</span> <span class="o">&lt;=</span> <span class="mi">5</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">),</span> <span class="n">repeat</span><span class="o">=</span><span class="n">n_rot</span><span class="p">))</span>
+
+        <span class="n">np_rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span>
+
+        <span class="n">rotation_list</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span>
+            <span class="nb">tuple</span><span class="p">(</span><span class="n">np_rng</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">),</span> <span class="n">size</span><span class="o">=</span><span class="n">n_rot</span><span class="p">))</span> <span class="k">for</span> <span class="n">counter</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">rotation_list</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1024</span><span class="p">:</span>
+            <span class="n">rotation_list</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">np_rng</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">),</span> <span class="n">n_rot</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">rotation_list</span><span class="p">)</span>
+
+<div class="viewcode-block" id="OpenFEPOPS.generate_conformers"><a class="viewcode-back" href="../../fepops.html#fepops.fepops.OpenFEPOPS.generate_conformers">[docs]</a>    <span class="k">def</span> <span class="nf">generate_conformers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mol</span><span class="p">:</span> <span class="n">Chem</span><span class="o">.</span><span class="n">rdchem</span><span class="o">.</span><span class="n">Mol</span><span class="p">,</span> <span class="n">random_seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">42</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Generate conformers with rotatable bonds</span>
+
+<span class="sd">        Generate conformers for a molecule, enumerating rotatable bonds over 90 degree angles.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        mol : Chem.rdchem.Mol</span>
+<span class="sd">            The Rdkit mol object of the input molecule.</span>
+<span class="sd">        random_seed : reproducibility</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        List</span>
+<span class="sd">            A list containing mol objects of different conformers with different angles of rotetable bonds.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">mol</span> <span class="o">=</span> <span class="n">Chem</span><span class="o">.</span><span class="n">AddHs</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span>
+
+            <span class="n">params</span> <span class="o">=</span> <span class="n">AllChem</span><span class="o">.</span><span class="n">ETKDGv3</span><span class="p">()</span>
+            <span class="n">params</span><span class="o">.</span><span class="n">useSmallRingTorsions</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">params</span><span class="o">.</span><span class="n">randomSeed</span> <span class="o">=</span> <span class="n">random_seed</span>
+            <span class="n">original_conformer</span> <span class="o">=</span> <span class="n">mol</span><span class="o">.</span><span class="n">GetConformer</span><span class="p">(</span><span class="n">AllChem</span><span class="o">.</span><span class="n">EmbedMolecule</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">params</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="n">params</span> <span class="o">=</span> <span class="n">AllChem</span><span class="o">.</span><span class="n">ETKDGv2</span><span class="p">()</span>
+            <span class="nb">id</span> <span class="o">=</span> <span class="n">AllChem</span><span class="o">.</span><span class="n">EmbedMolecule</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">id</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="s2">&quot;Coords could not be generated without using random coords. using random coords now&quot;</span>
+                <span class="p">)</span>
+                <span class="n">params</span><span class="o">.</span><span class="n">useRandomCoords</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">original_conformer</span> <span class="o">=</span> <span class="n">mol</span><span class="o">.</span><span class="n">GetConformer</span><span class="p">(</span>
+                    <span class="n">AllChem</span><span class="o">.</span><span class="n">EmbedMolecule</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Conformer embedding failed&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="p">[]</span>
+        <span class="n">dihedrals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_dihedrals</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span>
+        <span class="n">starting_angles</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">rdMolTransforms</span><span class="o">.</span><span class="n">GetDihedralDeg</span><span class="p">(</span><span class="n">original_conformer</span><span class="p">,</span> <span class="o">*</span><span class="n">dihedral_atoms</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">dihedral_atoms</span> <span class="ow">in</span> <span class="n">dihedrals</span>
+        <span class="p">]</span>
+        <span class="n">bond_states</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sample_bond_states</span><span class="p">(</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">dihedrals</span><span class="p">),</span> <span class="n">zlib</span><span class="o">.</span><span class="n">crc32</span><span class="p">(</span><span class="n">mol</span><span class="o">.</span><span class="n">GetConformer</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">GetPositions</span><span class="p">()</span><span class="o">.</span><span class="n">tobytes</span><span class="p">())</span>
+        <span class="p">)</span>
+
+        <span class="n">new_conf_mol_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">bond_state</span> <span class="ow">in</span> <span class="n">bond_states</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_generate_conf</span><span class="p">(</span>
+                <span class="n">original_conformer</span><span class="p">,</span> <span class="n">dihedrals</span><span class="p">,</span> <span class="n">starting_angles</span><span class="p">,</span> <span class="n">bond_state</span>
+            <span class="p">)</span>
+            <span class="n">new_conf_mol_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Chem</span><span class="o">.</span><span class="n">Mol</span><span class="p">(</span><span class="n">mol</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">new_conf_mol_list</span></div>
+
+    <span class="k">def</span> <span class="nf">_generate_conf</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">conformer</span><span class="p">:</span> <span class="n">Chem</span><span class="o">.</span><span class="n">rdchem</span><span class="o">.</span><span class="n">Conformer</span><span class="p">,</span>
+        <span class="n">dihedrals</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span>
+        <span class="n">starting_angles</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span>
+        <span class="n">bond_state</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Rotate the assigned rotatable bonds</span>
+
+<span class="sd">        Change conformers by Rotating the assigned rotatable bond based onset dihedral angles defined</span>
+<span class="sd">        by four flanking atoms.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        conformer : Chem.rdchem.Conformer</span>
+<span class="sd">            The Rdkit conformer object.</span>
+<span class="sd">        dihedrals : tuple</span>
+<span class="sd">            A tuple containing all identified dihedrals with the index of their four defined atoms.</span>
+<span class="sd">        starting_angles : tuple</span>
+<span class="sd">            A tuple containing the orignal states (dihedral angles) of all the rotatable bond before rotating.</span>
+<span class="sd">        bond_state : tuple</span>
+<span class="sd">            A tuple containing a specific bond state (a combination of various rotation angles) for all</span>
+<span class="sd">            rotatable bonds of a molecule.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">dihedral_atoms</span><span class="p">,</span> <span class="n">torsion_angle_multiplier</span><span class="p">,</span> <span class="n">orig_torsion_angle</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+            <span class="n">dihedrals</span><span class="p">,</span> <span class="n">bond_state</span><span class="p">,</span> <span class="n">starting_angles</span>
+        <span class="p">):</span>
+            <span class="n">rdMolTransforms</span><span class="o">.</span><span class="n">SetDihedralDeg</span><span class="p">(</span>
+                <span class="n">conformer</span><span class="p">,</span>
+                <span class="o">*</span><span class="n">dihedral_atoms</span><span class="p">,</span>
+                <span class="n">orig_torsion_angle</span> <span class="o">+</span> <span class="n">torsion_angle_multiplier</span> <span class="o">*</span> <span class="mf">90.0</span><span class="p">,</span>
+            <span class="p">)</span>
+
+<div class="viewcode-block" id="OpenFEPOPS.get_centroid_pharmacophoric_features"><a class="viewcode-back" href="../../fepops.html#fepops.fepops.OpenFEPOPS.get_centroid_pharmacophoric_features">[docs]</a>    <span class="k">def</span> <span class="nf">get_centroid_pharmacophoric_features</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">mol</span><span class="p">:</span> <span class="n">Chem</span><span class="o">.</span><span class="n">rdchem</span><span class="o">.</span><span class="n">Mol</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Obtain the four centroids and their corresponding pharmacophoric features</span>
+
+<span class="sd">        Obtain the four centroids and then calucate and assign their corresponding pharmacophoric</span>
+<span class="sd">        features (logP, charges, HBA, HBD, six distances between four centroids).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        mol : Chem.rdchem.Mol</span>
+<span class="sd">            The Rdkit mol object of the input molecule.</span>
+<span class="sd">        num_centroids : int</span>
+<span class="sd">            sThe number of centoids used for clustering. By default 4.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        np.ndarray</span>
+<span class="sd">            A Numpy array containing 22 pharmacophoric features for all conformers.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">centroid_coords</span><span class="p">,</span> <span class="n">instance_cluster_labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kmeans_func</span><span class="p">(</span>
+            <span class="n">mol</span><span class="o">.</span><span class="n">GetConformer</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">GetPositions</span><span class="p">(),</span>
+            <span class="n">num_centroids</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">num_centroids_per_fepop</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">atomic_logP_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calculate_atomic_logPs</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span>
+        <span class="n">atomic_charge_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calculate_partial_charges</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span>
+        <span class="n">hb_acceptors</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span>
+            <span class="n">i</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">mol</span><span class="o">.</span><span class="n">GetSubstructMatches</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acceptor_mol_from_smarts</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">hb_donors</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span>
+            <span class="n">i</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">mol</span><span class="o">.</span><span class="n">GetSubstructMatches</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">donor_mol_from_smarts</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">pharmacophore_features_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">num_centroids_per_fepop</span><span class="p">,</span> <span class="mi">4</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">centroid</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_centroids_per_fepop</span><span class="p">):</span>
+            <span class="n">centroid_atomic_id</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">instance_cluster_labels</span> <span class="o">==</span> <span class="n">centroid</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">sum_of_logP</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sum_of_atomic_features_by_centroids</span><span class="p">(</span>
+                <span class="n">atomic_logP_dict</span><span class="p">,</span> <span class="n">centroid_atomic_id</span>
+            <span class="p">)</span>
+            <span class="n">sum_of_charge</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sum_of_atomic_features_by_centroids</span><span class="p">(</span>
+                <span class="n">atomic_charge_dict</span><span class="p">,</span> <span class="n">centroid_atomic_id</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">atom_id</span> <span class="ow">in</span> <span class="n">hb_acceptors</span> <span class="k">for</span> <span class="n">atom_id</span> <span class="ow">in</span> <span class="n">centroid_atomic_id</span><span class="p">):</span>
+                <span class="n">hba</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">hba</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">atom_id</span> <span class="ow">in</span> <span class="n">hb_donors</span> <span class="k">for</span> <span class="n">atom_id</span> <span class="ow">in</span> <span class="n">centroid_atomic_id</span><span class="p">):</span>
+                <span class="n">hbd</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">hbd</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="n">pharmacophore_features_arr</span><span class="p">[</span><span class="n">centroid</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">sum_of_charge</span><span class="p">,</span>
+                <span class="n">sum_of_logP</span><span class="p">,</span>
+                <span class="n">hbd</span><span class="p">,</span>
+                <span class="n">hba</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="n">sorted_index_rank_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">lexsort</span><span class="p">(</span><span class="n">pharmacophore_features_arr</span><span class="o">.</span><span class="n">T</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">centroid_coords</span> <span class="o">=</span> <span class="n">centroid_coords</span><span class="p">[</span><span class="n">sorted_index_rank_arr</span><span class="p">]</span>
+        <span class="n">pharmacophore_features_arr</span> <span class="o">=</span> <span class="n">pharmacophore_features_arr</span><span class="p">[</span><span class="n">sorted_index_rank_arr</span><span class="p">]</span>
+
+        <span class="n">centroid_dist</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_centroid_distances</span><span class="p">(</span>
+            <span class="n">centroid_coords</span><span class="p">,</span> <span class="n">is_distance_matrix</span><span class="o">=</span><span class="kc">False</span>
+        <span class="p">)</span>
+        <span class="n">pharmacophore_features_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">pharmacophore_features_arr</span><span class="p">,</span> <span class="n">centroid_dist</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">pharmacophore_features_arr</span></div>
+
+<div class="viewcode-block" id="OpenFEPOPS.get_fepops"><a class="viewcode-back" href="../../fepops.html#fepops.fepops.OpenFEPOPS.get_fepops">[docs]</a>    <span class="k">def</span> <span class="nf">get_fepops</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">mol</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">Chem</span><span class="o">.</span><span class="n">rdchem</span><span class="o">.</span><span class="n">Mol</span><span class="p">],</span>
+        <span class="n">is_canonical</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">GetFepopStatusCode</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="kc">None</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get Fepops descriptors</span>
+
+<span class="sd">        This method returns Fepops descriptors from a smiles string.</span>
+
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        mol : Union[str, None, Chem.rdchem.Mol]</span>
+<span class="sd">            Molecule as a SMILES string or RDKit molecule. Can also be None,</span>
+<span class="sd">            in which case a failure error status is returned along with None</span>
+<span class="sd">            in place of the requested Fepops descriptors.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Tuple[GetFepopStatusCode, Union[np.ndarray, None]]</span>
+<span class="sd">            Returns a tuple, with the first value being a GetFepopStatusCode</span>
+<span class="sd">            (enum) denoting SUCCESS or FAILED_TO_GENERATE. The second tuple</span>
+<span class="sd">            element is either None (if unsuccessful), or a np.ndarray containing</span>
+<span class="sd">            the calculated Fepops descriptors of the requested input molecule.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">original_smiles</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">GetFepopStatusCode</span><span class="o">.</span><span class="n">SUCCESS</span><span class="p">,</span> <span class="n">mol</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">original_smiles</span> <span class="o">=</span> <span class="n">mol</span>
+            <span class="n">mol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mol_from_smiles</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">mol</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Failed to make a molecule</span><span class="si">{</span><span class="s1">&#39; from &#39;</span><span class="o">+</span><span class="n">original_smiles</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">original_smiles</span><span class="w"> </span><span class="ow">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="kc">None</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">GetFepopStatusCode</span><span class="o">.</span><span class="n">FAILED_TO_GENERATE</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">Lipinski</span><span class="o">.</span><span class="n">HeavyAtomCount</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_centroids_per_fepop</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Number of heavy atoms (</span><span class="si">{</span><span class="n">Lipinski</span><span class="o">.</span><span class="n">HeavyAtomCount</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span><span class="si">}</span><span class="s2">) below requested feature points (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">num_centroids_per_fepop</span><span class="si">}</span><span class="s2">) for molecule </span><span class="si">{</span><span class="n">original_smiles</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">original_smiles</span><span class="w"> </span><span class="ow">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="kc">None</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">GetFepopStatusCode</span><span class="o">.</span><span class="n">FAILED_TO_GENERATE</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="n">mol</span> <span class="o">=</span> <span class="n">Chem</span><span class="o">.</span><span class="n">AddHs</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span>
+
+        <span class="n">tautomers_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tautomer_enumerator</span><span class="o">.</span><span class="n">enumerate</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span>
+        <span class="n">each_mol_with_all_confs_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">t_mol</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">tautomers_list</span><span class="p">):</span>
+            <span class="n">conf_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_conformers</span><span class="p">(</span><span class="n">t_mol</span><span class="p">)</span>
+            <span class="n">each_mol_with_all_confs_list</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">conf_list</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">each_mol_with_all_confs_list</span> <span class="o">==</span> <span class="p">[]:</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Failed to generate conformers/tautomers </span><span class="si">{</span><span class="s1">&#39; for &#39;</span><span class="o">+</span><span class="n">original_smiles</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">original_smiles</span><span class="w"> </span><span class="ow">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="kc">None</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">GetFepopStatusCode</span><span class="o">.</span><span class="n">FAILED_TO_GENERATE</span><span class="p">,</span> <span class="kc">None</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">pharmacophore_feature_all_confs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">get_centroid_pharmacophoric_features</span><span class="p">(</span><span class="n">each_mol</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">each_mol</span> <span class="ow">in</span> <span class="n">each_mol_with_all_confs_list</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">original_smiles</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed molecule had SMILES: </span><span class="si">{</span><span class="n">original_smiles</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">GetFepopStatusCode</span><span class="o">.</span><span class="n">FAILED_TO_GENERATE</span><span class="p">,</span> <span class="kc">None</span>
+
+        <span class="n">medoids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_k_medoids</span><span class="p">(</span>
+            <span class="n">pharmacophore_feature_all_confs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_fepops_per_mol</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">GetFepopStatusCode</span><span class="o">.</span><span class="n">SUCCESS</span><span class="p">,</span> <span class="n">medoids</span></div>
+
+    <span class="k">def</span> <span class="nf">_score_scaler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">x2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Score function for the similarity calculation</span>
+
+<span class="sd">        The score function for the similarity calculation on the FEPOPS descriptors.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        x1 : np.ndarray</span>
+<span class="sd">            A Numpy array containing the FEPOPS descriptors 1.</span>
+<span class="sd">        x2 : np.ndarray</span>
+<span class="sd">            A Numpy array containing the FEPOPS descriptors 2.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            The FEPOPS similarity score (Pearson correlation).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">x1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scaler</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">x1</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">x2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scaler</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">x2</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">corrcoef</span><span class="p">(</span><span class="n">x1</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">x2</span><span class="o">.</span><span class="n">flatten</span><span class="p">())[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+
+<div class="viewcode-block" id="OpenFEPOPS.pairwise_correlation"><a class="viewcode-back" href="../../fepops.html#fepops.fepops.OpenFEPOPS.pairwise_correlation">[docs]</a>    <span class="k">def</span> <span class="nf">pairwise_correlation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">):</span>
+        <span class="n">am</span> <span class="o">=</span> <span class="n">A</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">bm</span> <span class="o">=</span> <span class="n">B</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">am</span><span class="o">.</span><span class="n">T</span>
+<div class="viewcode-block" id="OpenFEPOPS.calc_similarity"><a class="viewcode-back" href="../../fepops.html#fepops.fepops.OpenFEPOPS.calc_similarity">[docs]</a>            <span class="o">@</span> <span class="n">bm</span>
+            <span class="o">/</span> <span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">am</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span><span class="o">.</span><span class="n">T</span>
+                <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">bm</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+            <span class="p">)</span>
+        <span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">calc_similarity</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">query</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span>
+        <span class="n">candidate</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">]],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate FEPOPS similarity</span>
+
+<span class="sd">        Method for calculating molecular similarity based on their OpenFEPOPS descriptors.</span>
+<span class="sd">        Centres and scales FEPOPS descriptors using parameters passed upon initialisation.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        query : Union[np.ndarray, str]</span>
+<span class="sd">            A Numpy array containing the FEPOPS descriptors of the query molecule</span>
+<span class="sd">            or a smiles string from which to generate FEPOPS descriptors for the</span>
+<span class="sd">            query molecule. Can also be None, in which case, np.nan is returned</span>
+<span class="sd">            as a score.</span>
+<span class="sd">        candidate : Union[np.ndarray, str, None, list[np.ndarray, str, None]],</span>
+<span class="sd">            A Numpy array containing the FEPOPS descriptors of the candidate</span>
+<span class="sd">            molecule or a smiles string from which to generate FEPOPS descriptors</span>
+<span class="sd">            for the candidate molecule.  Can also be None, in which case, np.nan is</span>
+<span class="sd">            returned as a score, or a list of any of these. If it is a list,</span>
+<span class="sd">            then a list of scores against the single candidate is returned.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Fepops similarity between two molecules</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">query_status</span><span class="p">,</span> <span class="n">query</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_fepops</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">query_status</span> <span class="o">!=</span> <span class="n">GetFepopStatusCode</span><span class="o">.</span><span class="n">SUCCESS</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">candidate</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">scores</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">candidate</span><span class="p">:</span>
+                <span class="n">scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">calc_similarity</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">c</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">scores</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">candidate</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">candidate_status</span><span class="p">,</span> <span class="n">candidate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_fepops</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">candidate_status</span> <span class="o">!=</span> <span class="n">GetFepopStatusCode</span><span class="o">.</span><span class="n">SUCCESS</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;query was not, or could not be coerced into a np.ndarray&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">candidate</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;candidate was not, or could not be coerced into a np.ndarray&quot;</span>
+            <span class="p">)</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(((</span><span class="n">query</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">descriptor_means</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">descriptor_stds</span><span class="p">),</span><span class="n">nan</span><span class="o">=</span><span class="mf">1e-9</span><span class="p">)</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">((</span><span class="n">candidate</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">descriptor_means</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">descriptor_stds</span><span class="p">,</span> <span class="n">nan</span><span class="o">=</span><span class="mf">1e-9</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pairwise_correlation</span><span class="p">(</span><span class="n">q</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">c</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span></div>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">query</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
+        <span class="n">candidate</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_similarity</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">candidate</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Yan-Kai Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
