@@ -838,7 +838,7 @@ class OpenFEPOPS:
         if isinstance(candidate, list):
             scores = []
             for c in candidate:
-                self.scores.append(self.calc_similarity(query, c))
+                scores.append(self.calc_similarity(query, c))
             return scores
         if not isinstance(candidate, np.ndarray):
             candidate_status, candidate = self.get_fepops(candidate)
@@ -853,7 +853,6 @@ class OpenFEPOPS:
             )
         q = np.nan_to_num(((query - self.descriptor_means) / self.descriptor_stds),nan=1e-9)
         c = np.nan_to_num((candidate - self.descriptor_means) / self.descriptor_stds, nan=1e-9)
-        print(self.pairwise_correlation(q.flatten(),c.flatten()).shape)
         return self.pairwise_correlation(q.flatten(), c.flatten())
 
     def __call__(
