@@ -1,4 +1,4 @@
-name: fepops
+name: openfepops
 channels:
   - conda-forge
   - defaults

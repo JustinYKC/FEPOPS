@@ -1,6 +1,6 @@
 import numpy as np
 import fire
-from .fepops import Fepops, GetFepopStatusCode
+from .fepops import OpenFEPOPS, GetFepopStatusCode
 from .fepops_persistent import get_persistent_fepops_storage_object
 
 
@@ -30,7 +30,7 @@ class FepopsCMDLineInterface:
             with get_persistent_fepops_storage_object(self.database_file) as f:
                 return f.get_fepops(smi)
         else:
-            f = Fepops()
+            f = OpenFEPOPS()
             return f.get_fepops(smi)
 
     def calc_sim(self, smi1: str, smi2: str):
@@ -60,7 +60,7 @@ class FepopsCMDLineInterface:
                 else:
                     return f.calc_similarity(fepops_features1, fepops_features2)
         else:
-            f = Fepops()
+            f = OpenFEPOPS()
             print(f.calc_similarity(smi1, smi2))
 
     def save_descriptors(self, smi):

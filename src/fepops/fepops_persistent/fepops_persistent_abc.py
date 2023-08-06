@@ -7,7 +7,7 @@ from rdkit import Chem
 from scipy.spatial.distance import cdist, pdist, squareform
 from tqdm import tqdm
 from fepops.fepops import GetFepopStatusCode
-from ..fepops import Fepops
+from ..fepops import OpenFEPOPS
 import multiprocessing as mp
 
 
@@ -89,7 +89,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
         n_jobs: int = -1,
     ):
         self.database_file = Path(database_file)
-        self.fepops_object = Fepops(kmeans_method=kmeans_method)
+        self.fepops_object = OpenFEPOPS(kmeans_method=kmeans_method)
         self.parallel = parallel
         self.n_jobs = n_jobs
 
@@ -126,7 +126,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
                     # processes=min(len(canonical_smiles_to_mol_dict), mp.cpu_count()),
                     processes=2,
                     initializer=self._parallel_init_worker_desc_gen_shared_fepops_ob,
-                    initargs=(Fepops(**fepops_object_constructor_kwargs),),
+                    initargs=(OpenFEPOPS(**fepops_object_constructor_kwargs),),
                 ).imap(
                     self._parallel_get_gen_fepops_descriptors,
                     canonical_smiles_to_mol_dict.items(),

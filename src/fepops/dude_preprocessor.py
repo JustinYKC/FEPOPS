@@ -1,7 +1,7 @@
 from typing import Union, Optional
 from pathlib import Path
 from tqdm import tqdm
-from fepops import Fepops
+from fepops import OpenFEPOPS
 import pandas as pd
 import multiprocessing as mp
 from rdkit import Chem
@@ -21,7 +21,7 @@ class DudePreprocessor:
             raise FileNotFoundError(f"Dude dataset not found in path: {self.dude_path}")
         self.dude_processed_path = self.dude_path / Path("processed")
         self.dude_processed_path.parent.mkdir(parents=True, exist_ok=True)
-        self.fepops_ob = Fepops()
+        self.fepops_ob = OpenFEPOPS()
 
     def __call__(
         self,
@@ -48,7 +48,7 @@ class DudePreprocessor:
     @staticmethod
     def _parallel_init_worker_desc_gen_shared_fepops_ob():
         global shared_fepops_ob
-        shared_fepops_ob = Fepops()
+        shared_fepops_ob = OpenFEPOPS()
 
     @staticmethod
     def _parallel_get_rdkit_cansmi(s):

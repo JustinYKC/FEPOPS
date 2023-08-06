@@ -2,7 +2,7 @@ import time
 import numpy as np
 from sklearn.datasets import make_classification
 from tqdm import tqdm
-from fepops import Fepops
+from fepops import OpenFEPOPS
 from dataclasses import dataclass
 from typing import Callable, Union, Optional
 from pathlib import Path
@@ -326,7 +326,7 @@ class FepopsBenchmarker:
         1024 fepops.
 
         """
-        fepops_sklearn = Fepops(kmeans_method=kmeans_method)
+        fepops_sklearn = OpenFEPOPS(kmeans_method=kmeans_method)
 
         cached_1k_1024_fepops = self.get_1k_x_1024_fepops()
         timings = np.empty(cached_1k_1024_fepops.shape[0])
@@ -338,7 +338,7 @@ class FepopsBenchmarker:
             f"Median time to compute kmeans with sklearn from 1024 fepops={np.median(timings)}, mean={np.mean(timings)}"
         )
 
-        fepops_ptcpu = Fepops(kmeans_method=kmeans_method)
+        fepops_ptcpu = OpenFEPOPS(kmeans_method=kmeans_method)
 
         timings = np.empty(cached_1k_1024_fepops.shape[0])
         for i, f_1024 in enumerate(tqdm(cached_1k_1024_fepops, "Benchmarking")):

@@ -1,20 +1,20 @@
 """Initial framework of FEPOPS test suite"""
 
 from pathlib import Path
-from fepops import Fepops
+from fepops import OpenFEPOPS
 from fepops.fepops import GetFepopStatusCode
 from fepops.fepops_persistent import get_persistent_fepops_storage_object
 
 
 def test_k_medoids_simple(fepops_1024_unclustered):
     """Test k_medoid clustering.  Needs expansion"""
-    f = Fepops()
+    f = OpenFEPOPS()
     assert f._get_k_medoids(fepops_1024_unclustered).shape[0] == 7
 
 
 def test_all_test_mols_rank_themselves_top(test_mol_smiles):
     """Test similarity of paracetamol to itself, diclofenac, ibuprofen, nicotine and vanilin"""
-    f = Fepops()
+    f = OpenFEPOPS()
     fepops_dict = {
         mol_name: f.get_fepops(mol_smiles)
         for mol_name, mol_smiles in test_mol_smiles.items()

@@ -21,7 +21,7 @@ GetFepopStatusCode = Enum(
 )
 
 
-class Fepops:
+class OpenFEPOPS:
     """Fepops (Feature Points) molecular similarity object
 
     Fepops allows the comparison of molecules using feature points, see the original
@@ -88,7 +88,7 @@ class Fepops:
             self.kmeans_func = getattr(self, f"_perform_kmeans_{kmeans_method}")
         except:
             raise ValueError(
-                f"Supplied kmeans_method argument ({kmeans_method}) does not match a callable method of the form (_perfom_kmeans_{kmeans_method}). Implemented methods seem to be: {[m.split('_')[3] for m in Fepops.__dict__.keys() if m.startswith('_perform_kmeans_')]}"
+                f"Supplied kmeans_method argument ({kmeans_method}) does not match a callable method of the form (_perfom_kmeans_{kmeans_method}). Implemented methods seem to be: {[m.split('_')[3] for m in OpenFEPOPS.__dict__.keys() if m.startswith('_perform_kmeans_')]}"
             )
 
         try:
@@ -97,7 +97,7 @@ class Fepops:
             )
         except:
             raise ValueError(
-                f"Supplied descriptor_scaling_method argument ({descriptor_scaling_method}) does not match a callable method of the form (_perform_descriptor_scaling_{kmeans_method}). Implemented methods seem to be: {[m for m in Fepops.__dict__.keys() if m.startswith('_perform_descriptor_scaling_')]}"
+                f"Supplied descriptor_scaling_method argument ({descriptor_scaling_method}) does not match a callable method of the form (_perform_descriptor_scaling_{kmeans_method}). Implemented methods seem to be: {[m for m in OpenFEPOPS.__dict__.keys() if m.startswith('_perform_descriptor_scaling_')]}"
             )
 
         self.sort_by_features_col_index_dict = {

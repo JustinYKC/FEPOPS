@@ -1,1 +1,1 @@
-from .fepops import Fepops
+from .fepops import OpenFEPOPS
