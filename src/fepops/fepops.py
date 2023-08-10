@@ -22,47 +22,76 @@ GetFepopStatusCode = Enum(
 
 
 class OpenFEPOPS:
-    """Fepops (Feature Points) molecular similarity object
+    """OpenFEPOPS (Feature Points) molecular similarity object
 
-    Fepops allows the comparison of molecules using feature points, see the original
-    publication for more information: https://doi.org/10.1021/jm049654z. In short,
-    featurepoints reduce the number of points used to represent a molecule by combining
-    atoms and their properties. Typically used to compare libraries of small molecules
-    against known actives in the hope of discovering biosimilars based on queries.
+    Fepops allows the comparison of molecules using feature points, see the
+    original publication for more information:
+    https://doi.org/10.1021/jm049654z. In short, featurepoints reduce the number
+    of points used to represent a molecule by combining atoms and their
+    properties. Typically used to compare libraries of small molecules against
+    known actives in the hope of discovering biosimilars based on queries.
 
     Parameters
     ----------
     kmeans_method : str, optional
-        String literal denoting the method which should be used for kmeans calculations.
-        May be one of "sklearn", "pytorchgpu", or "pytorchcpu". If "sklearn" is passed
-        then Scikit-learn's kmeans implementation is used. However a faster
-        implementation from the fast_pytorch_kmeans package can also be used if Pytorch
-        is available and may be run in cpu-only mode, or GPU accelerated mode. Note:
-        GPU accelerated mode should only be used if you are stretching the capabilities
-        in terms of feature points for large molecules.  Small molecules will not
-        benefit from GPU acceleration due to overheads.  By default "pytorchcpu"
+        String literal denoting the method which should be used for kmeans
+        calculations. May be one of "sklearn", "pytorchgpu", or "pytorchcpu". If
+        "sklearn" is passed then Scikit-learn's kmeans implementation is used.
+        However a faster implementation from the fast_pytorch_kmeans package can
+        also be used if Pytorch is available and may be run in cpu-only mode, or
+        GPU accelerated mode. Note: GPU accelerated mode should only be used if
+        you are stretching the capabilities in terms of feature points for large
+        molecules.  Small molecules will not benefit at all from GPU
+        acceleration due to overheads.  By default "sklearn"
     max_tautomers : Optional[int], optional
         Maximum number of tautomers which should be generated. Internally, this
-        implementation of FEPOPS relies upon RDKit's TautomerEnumerator to generate
-        tautomers and may optionally pass in a limit to the number of Tautomers to
-        generate. Unless the molecules (or macromolecules) you are working with generate
-        massive numbers of tautomers, this should be None implying that no limit should
-        be placed on tautomer generation. By default None
+        implementation of FEPOPS relies upon RDKit's TautomerEnumerator to
+        generate tautomers and may optionally pass in a limit to the number of
+        Tautomers to generate. Unless the molecules (or macromolecules) you are
+        working with generate massive numbers of tautomers, this should be None
+        implying that no limit should be placed on tautomer generation. By
+        default None
     num_fepops_per_mol : int, optional
         Number of feature points to use in the representation of a molecule.
-        Literature notes that 7 has been empirically found to be a good number of
-        feature points for performant representations of small molecules. This might
-        be increased if you are dealing with large and very flexible molecules. By
-        default 7
+        Literature notes that 7 has been empirically found to be a good number
+        of feature points for performant representations of small molecules.
+        This might be increased if you are dealing with large and very flexible
+        molecules, by default 7
     num_centroids_per_fepop : int, optional
-        Each fepop is represented by a number of centres, into which atom properties
-        are compressed. Literature notes that this has been empirically determined
-        to be 4 for a performant representation of small molecules. By default 4
+        Each fepop is represented by a number of centres, into which atom
+        properties are compressed. Literature notes that this has been
+        empirically determined to be 4 for a performant representation of small
+        molecules. By default 4
+    descriptor_means : Tuple[float, ...], optional
+        Due to the need to apply scaling to FEPOPS, the DUDE diversity set has
+        been profiled and the means collected for all contained FEPOPS. This
+        this allows centering and scaling of FEPOPS before scoring. This field
+        contains default values for FEPOP means calculated with
+        num_fepops_per_mol = 7, num_centroids_per_fepop=4, and kmeans_method =
+        'sklearn'. New values should be supplied if the FEPOPS object is using
+        different numbers for these values.  By default (-0.28932319,0.5166312,
+        0.37458883,0.99913668,-0.04193182,1.03616917,0.27327129,0.99839024,
+        0.09701198,1.12969387,0.23718642,0.99865705,0.35968991,0.6649304,
+        0.4123743,0.99893657,5.70852885,6.3707943,6.47354071,6.26385429,
+        6.19229367,6.22946713)
+    descriptor_sds : Tuple[float, ...], optional
+        Due to the need to apply scaling to FEPOPS, the DUDE diversity set has
+        been profiled and the means collected for all contained FEPOPS. This
+        this allows centering and scaling of FEPOPS before scoring. This field
+        contains default values for FEPOP standard deviations calculated with
+        num_fepops_per_mol = 7, num_centroids_per_fepop=4, and kmeans_method =
+        'sklearn'. New values should be supplied if the FEPOPS object is using
+        different numbers for these values.  By default (0.35067291,1.00802116,
+        0.48380817,0.02926675,0.15400475,0.86220776,0.44542581,0.03999429,
+        0.16085455,0.92042695,0.42515847,0.03655217,0.35778578,1.36108994,
+        0.49210665,0.03252466,1.96446927,2.30792259,2.5024708,2.4155645,
+        2.29434487,2.31437527)
 
     Raises
     ------
     ValueError
         Invalid kmeans method
+
     """
 
     def __init__(
@@ -121,6 +150,76 @@ class OpenFEPOPS:
             2.31437527,
         ),
     ):
+        """OpenFEPOPS (Feature Points) molecular similarity object
+
+        Fepops allows the comparison of molecules using feature points, see the
+        original publication for more information:
+        https://doi.org/10.1021/jm049654z. In short, featurepoints reduce the number
+        of points used to represent a molecule by combining atoms and their
+        properties. Typically used to compare libraries of small molecules against
+        known actives in the hope of discovering biosimilars based on queries.
+
+        Parameters
+        ----------
+        kmeans_method : str, optional
+            String literal denoting the method which should be used for kmeans
+            calculations. May be one of "sklearn", "pytorchgpu", or "pytorchcpu". If
+            "sklearn" is passed then Scikit-learn's kmeans implementation is used.
+            However a faster implementation from the fast_pytorch_kmeans package can
+            also be used if Pytorch is available and may be run in cpu-only mode, or
+            GPU accelerated mode. Note: GPU accelerated mode should only be used if
+            you are stretching the capabilities in terms of feature points for large
+            molecules.  Small molecules will not benefit at all from GPU
+            acceleration due to overheads.  By default "sklearn"
+        max_tautomers : Optional[int], optional
+            Maximum number of tautomers which should be generated. Internally, this
+            implementation of FEPOPS relies upon RDKit's TautomerEnumerator to
+            generate tautomers and may optionally pass in a limit to the number of
+            Tautomers to generate. Unless the molecules (or macromolecules) you are
+            working with generate massive numbers of tautomers, this should be None
+            implying that no limit should be placed on tautomer generation. By
+            default None
+        num_fepops_per_mol : int, optional
+            Number of feature points to use in the representation of a molecule.
+            Literature notes that 7 has been empirically found to be a good number
+            of feature points for performant representations of small molecules.
+            This might be increased if you are dealing with large and very flexible
+            molecules, by default 7
+        num_centroids_per_fepop : int, optional
+            Each fepop is represented by a number of centres, into which atom
+            properties are compressed. Literature notes that this has been
+            empirically determined to be 4 for a performant representation of small
+            molecules. By default 4
+        descriptor_means : Tuple[float, ...], optional
+            Due to the need to apply scaling to FEPOPS, the DUDE diversity set has
+            been profiled and the means collected for all contained FEPOPS. This
+            this allows centering and scaling of FEPOPS before scoring. This field
+            contains default values for FEPOP means calculated with
+            num_fepops_per_mol = 7, num_centroids_per_fepop=4, and kmeans_method =
+            'sklearn'. New values should be supplied if the FEPOPS object is using
+            different numbers for these values.  By default (-0.28932319,0.5166312,
+            0.37458883,0.99913668,-0.04193182,1.03616917,0.27327129,0.99839024,
+            0.09701198,1.12969387,0.23718642,0.99865705,0.35968991,0.6649304,
+            0.4123743,0.99893657,5.70852885,6.3707943,6.47354071,6.26385429,
+            6.19229367,6.22946713)
+        descriptor_sds : Tuple[float, ...], optional
+            Due to the need to apply scaling to FEPOPS, the DUDE diversity set has
+            been profiled and the means collected for all contained FEPOPS. This
+            this allows centering and scaling of FEPOPS before scoring. This field
+            contains default values for FEPOP standard deviations calculated with
+            num_fepops_per_mol = 7, num_centroids_per_fepop=4, and kmeans_method =
+            'sklearn'. New values should be supplied if the FEPOPS object is using
+            different numbers for these values.  By default (0.35067291,1.00802116,
+            0.48380817,0.02926675,0.15400475,0.86220776,0.44542581,0.03999429,
+            0.16085455,0.92042695,0.42515847,0.03655217,0.35778578,1.36108994,
+            0.49210665,0.03252466,1.96446927,2.30792259,2.5024708,2.4155645,
+            2.29434487,2.31437527)
+        Raises
+        ------
+        ValueError
+            Invalid kmeans method
+        """
+
         self.descriptor_means = descriptor_means
         self.descriptor_stds = descriptor_stds
 
@@ -156,11 +255,11 @@ class OpenFEPOPS:
     def _get_k_medoids(
         self, input_x: np.ndarray, k: int = 7, random_state: int = 42
     ) -> np.ndarray:
-        """Select k Fepops from conformers
+        """Select k FEPOPS from conformers and tautomers
 
         Gets k mediods from conformers (and tautomers) which are representative
         of the molecule as a function of conformer and tautomer states by virtue
-        of chosen fepops being diverse.
+        of chosen FEPOPS being diverse.
 
         Parameters
         ----------
@@ -204,9 +303,9 @@ class OpenFEPOPS:
                     point_to_centroid_map[chosen_x_point] = i
                 medoids[i] = np.median(input_x[point_to_centroid_map == i], axis=0)
         # Sorting at this stage for reproducibility with existing pregenerated
-        # descriptor sets and convention with early fepops versions which relied
-        # upon fepops being sorted by charge (before moving to the newer CombiAlign
-        # scoring algorithm)
+        # descriptor sets and convention with early FEPOPS versions which relied
+        # upon FEPOPS within a molecule being sorted by charge (before moving to
+        # the newer CombiAlign scoring algorithm)
         return medoids[np.lexsort(medoids.T[::-1])]
 
     def _calculate_atomic_logPs(self, mol: Chem.rdchem.Mol) -> dict:
@@ -297,9 +396,7 @@ class OpenFEPOPS:
         num_centroids: int = 4,
         seed: int = 42,
     ) -> tuple:
-        """Perform kmeans calculation
-
-        Carry out kmeans calcaultion based on a given kmeans method and number of centroids.
+        """Perform kmeans calculation (sklearn method)
 
         Parameters
         ----------
@@ -313,7 +410,8 @@ class OpenFEPOPS:
         Returns
         -------
         tuple
-            A tuple containing the centroid coordinates and the cluster labels of molecular atoms.
+            A tuple containing the centroid coordinates and the cluster labels
+            of molecular atoms.
         """
         kmeans = _SKLearnKMeans(
             n_clusters=num_centroids,
@@ -344,7 +442,8 @@ class OpenFEPOPS:
         Returns
         -------
         tuple
-            A tuple containing the centroid coordinates and the cluster labels of molecular atoms.
+            A tuple containing the centroid coordinates and the cluster labels
+            of molecular atoms.
         """
         torch.manual_seed(seed)
         mol_coors_torch = torch.from_numpy(atom_coords)
@@ -378,7 +477,8 @@ class OpenFEPOPS:
         Returns
         -------
         tuple
-            A tuple containing the centroid coordinates and the cluster labels of molecular atoms.
+            A tuple containing the centroid coordinates and the cluster labels
+            of molecular atoms.
         """
         torch.manual_seed(seed)
         mol_coors_torch = torch.from_numpy(atom_coords).to("cuda")
@@ -427,6 +527,9 @@ class OpenFEPOPS:
 
     def _mol_from_smiles(self, smiles_string: str) -> Chem.rdchem.Mol:
         """Parse smiles to mol, catching errors
+
+        This SMILES->RDKit mol converter is used throughout OpenFEPOPS and as
+        such, any read in/parsing of a SMILES stirng should use this method.
 
         Parameters
         ----------
@@ -506,20 +609,23 @@ class OpenFEPOPS:
     def _sample_bond_states(self, n_rot: int, seed: int) -> list:
         """Sample a set of conformers with different rotation angles
 
-        A private method used to generate a set of bond angle multipliers (0 to 3) using
-        all rotatable bonds within a molecule. Up to 1024 conformers are sampled for a molecule if
-        n_rot is greater than five, otherwise all n_rot^4 are returned.
+        A private method used to generate a set of bond angle multipliers (0 to
+        3) using all rotatable bonds within a molecule. Up to 1024 conformers
+        are sampled for a molecule if n_rot is greater than five, otherwise all
+        n_rot^4 are returned.
 
         Parameters
         ----------
         n_nor : int
             The number of rotatable bonds in a molecule.
         seed : int
-            Seed for random sampling of rotamer space. Typically the hash of molecule coords.
+            Seed for random sampling of rotamer space. Typically the hash of
+            molecule coords.
         Returns
         -------
         List
-            A list containing the sampled bond states (rotation angles) for all of the rotatable bonds of a molecule.
+            A list containing the sampled bond states (rotation angles) for all
+            of the rotatable bonds of a molecule.
         """
         if n_rot <= 5:
             return list(itertools.product(range(4), repeat=n_rot))
@@ -534,28 +640,34 @@ class OpenFEPOPS:
             rotation_list.add(tuple(np_rng.choice(range(4), n_rot)))
         return list(rotation_list)
 
-    def generate_conformers(self, mol: Chem.rdchem.Mol, random_seed: int = 42) -> list:
+    def generate_conformers(self, mol: Chem.rdchem.Mol, random_state: int = 42) -> list:
         """Generate conformers with rotatable bonds
 
-        Generate conformers for a molecule, enumerating rotatable bonds over 90 degree angles.
+        Generate conformers for a molecule, enumerating rotatable bonds over 90
+        degree angles. This 90 degree increment was deemed opimal in literature.
 
         Parameters
         ----------
         mol : Chem.rdchem.Mol
             The Rdkit mol object of the input molecule.
-        random_seed : reproducibility
+        random_state : int
+            Integer to use as a random state when seeding the random number
+            generator.  By default 42.
+
 
         Returns
         -------
         List
-            A list containing mol objects of different conformers with different angles of rotetable bonds.
+            A list containing mol objects of different conformers with different
+            angles of rotetable bonds
+
         """
+        
         try:
             mol = Chem.AddHs(mol)
-
             params = AllChem.ETKDGv3()
             params.useSmallRingTorsions = True
-            params.randomSeed = random_seed
+            params.randomSeed = random_state
             original_conformer = mol.GetConformer(AllChem.EmbedMolecule(mol, params))
         except ValueError:
             params = AllChem.ETKDGv2()
@@ -599,20 +711,22 @@ class OpenFEPOPS:
     ) -> None:
         """Rotate the assigned rotatable bonds
 
-        Change conformers by Rotating the assigned rotatable bond based onset dihedral angles defined
-        by four flanking atoms.
+        Change conformers by rotating the assigned rotatable bond based on a set
+        of dihedral angles defined by four flanking atoms.
 
         Parameters
         ----------
         conformer : Chem.rdchem.Conformer
             The Rdkit conformer object.
         dihedrals : tuple
-            A tuple containing all identified dihedrals with the index of their four defined atoms.
+            A tuple containing all identified dihedrals with the index of their
+            four defined atoms.
         starting_angles : tuple
-            A tuple containing the orignal states (dihedral angles) of all the rotatable bond before rotating.
+            A tuple containing the orignal states (dihedral angles) of all the
+            rotatable bond before rotating.
         bond_state : tuple
-            A tuple containing a specific bond state (a combination of various rotation angles) for all
-            rotatable bonds of a molecule.
+            A tuple containing a specific bond state (a combination of various
+            rotation angles) for all rotatable bonds of a molecule.
         """
         for dihedral_atoms, torsion_angle_multiplier, orig_torsion_angle in zip(
             dihedrals, bond_state, starting_angles
@@ -627,17 +741,18 @@ class OpenFEPOPS:
         self,
         mol: Chem.rdchem.Mol,
     ) -> np.ndarray:
-        """Obtain the four centroids and their corresponding pharmacophoric features
+        """Obtain centroids and their corresponding pharmacophoric features
 
-        Obtain the four centroids and then calucate and assign their corresponding pharmacophoric
-        features (logP, charges, HBA, HBD, six distances between four centroids).
+        Obtain centroids and then calucate and assign their corresponding
+        pharmacophoric features (logP, charges, HBA, HBD, and distances
+        between the centroids, following the pattern used for calculation of
+        matrix determinants - in the case of 4 centroids, this is:
+        d1-4, d1-2, d2-3, d3-4, d1-3, d2-4)
 
         Parameters
         ----------
         mol : Chem.rdchem.Mol
             The Rdkit mol object of the input molecule.
-        num_centroids : int
-            sThe number of centoids used for clustering. By default 4.
 
         Returns
         -------
@@ -700,10 +815,7 @@ class OpenFEPOPS:
         mol: Union[str, None, Chem.rdchem.Mol],
         is_canonical: bool = False,
     ) -> Tuple[GetFepopStatusCode, Union[np.ndarray, None]]:
-        """Get Fepops descriptors
-
-        This method returns Fepops descriptors from a smiles string.
-
+        """Get Fepops descriptors for a molecule
 
         Parameters
         ----------
@@ -767,28 +879,21 @@ class OpenFEPOPS:
         )
         return GetFepopStatusCode.SUCCESS, medoids
 
-    def _score_scaler(self, x1: np.ndarray, x2: np.ndarray) -> float:
-        """Score function for the similarity calculation
-
-        The score function for the similarity calculation on the FEPOPS descriptors.
+    def pairwise_correlation(self, A: np.ndarray, B: np.ndarray):
+        """Fast method to generate pairwise correlation values (Pearson)
 
         Parameters
         ----------
-        x1 : np.ndarray
-            A Numpy array containing the FEPOPS descriptors 1.
-        x2 : np.ndarray
-            A Numpy array containing the FEPOPS descriptors 2.
+        A : np.ndarray
+            First features array (1D)
+        B : np.ndarray
+            Second features array (1D)
 
         Returns
         -------
-        float
-            The FEPOPS similarity score (Pearson correlation).
+        np.ndarray
+            2D matrix containing A vs B feature correlations
         """
-        x1 = self.scaler.fit_transform(x1.reshape(-1, 1))
-        x2 = self.scaler.fit_transform(x2.reshape(-1, 1))
-        return np.corrcoef(x1.flatten(), x2.flatten())[0, 1]
-
-    def pairwise_correlation(self, A, B):
         am = A - np.mean(A, axis=0, keepdims=True)
         bm = B - np.mean(B, axis=0, keepdims=True)
         return (
@@ -807,8 +912,9 @@ class OpenFEPOPS:
     ) -> float:
         """Calculate FEPOPS similarity
 
-        Method for calculating molecular similarity based on their OpenFEPOPS descriptors.
-        Centres and scales FEPOPS descriptors using parameters passed upon initialisation.
+        Method for calculating molecular similarity based on their OpenFEPOPS
+        descriptors. Centres and scales FEPOPS descriptors using parameters
+        passed upon object initialisation.
 
         Parameters
         ----------
@@ -851,8 +957,12 @@ class OpenFEPOPS:
             raise ValueError(
                 "candidate was not, or could not be coerced into a np.ndarray"
             )
-        q = np.nan_to_num(((query - self.descriptor_means) / self.descriptor_stds),nan=1e-9)
-        c = np.nan_to_num((candidate - self.descriptor_means) / self.descriptor_stds, nan=1e-9)
+        q = np.nan_to_num(
+            ((query - self.descriptor_means) / self.descriptor_stds), nan=1e-9
+        )
+        c = np.nan_to_num(
+            (candidate - self.descriptor_means) / self.descriptor_stds, nan=1e-9
+        )
         return self.pairwise_correlation(q.flatten(), c.flatten())
 
     def __call__(
@@ -860,4 +970,25 @@ class OpenFEPOPS:
         query: Union[np.ndarray, str],
         candidate: Union[np.ndarray, str],
     ) -> float:
+        """Calling the object has the same effect as calling calc_similarity
+
+        Parameters
+        ----------
+        query : Union[np.ndarray, str]
+            A Numpy array containing the FEPOPS descriptors of the query molecule
+            or a smiles string from which to generate FEPOPS descriptors for the
+            query molecule. Can also be None, in which case, np.nan is returned
+            as a score.
+        candidate : Union[np.ndarray, str, None, list[np.ndarray, str, None]],
+            A Numpy array containing the FEPOPS descriptors of the candidate
+            molecule or a smiles string from which to generate FEPOPS descriptors
+            for the candidate molecule.  Can also be None, in which case, np.nan is
+            returned as a score, or a list of any of these. If it is a list,
+            then a list of scores against the single candidate is returned.
+
+        Returns
+        -------
+        float
+            Fepops similarity between two molecules
+        """
         return self.calc_similarity(query, candidate)

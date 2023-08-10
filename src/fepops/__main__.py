@@ -7,7 +7,30 @@ from .fepops_persistent import get_persistent_fepops_storage_object
 
 
 class FepopsCMDLineInterface:
+    """Object to organise the command line interface to FEPOPS
+
+    Used as an entrypoint to allow use of simply 'fepops' on the command line
+    and provides access to the following sub commands:
+    - get_fepops
+    - calc_sim
+    - save_descriptors
+    - dude_preprocessor
+
+    """
+
     def __init__(self, database_file: str = None):
+        """Constructor for the command line inteface object
+
+        Allows singular definisition of a database file and subsequent use in
+        all subcommands.
+
+        Parameters
+        ----------
+        database_file : str, optional
+            If a string, then this is used as the database/cache file used by
+            all subprocesses. If None, then no database of cache file is used,
+            by default None.
+        """
         self.database_file = database_file
 
     def get_fepops(self, smi: str):
@@ -16,9 +39,9 @@ class FepopsCMDLineInterface:
         Parameters
         ----------
         smi : str
-            Molecule as a SMILES string. Can also be None, in which case a failure error
-            status is returned along with None in place of the requested Fepops
-            descriptors.
+            Molecule as a SMILES string. Can also be None, in which case a
+            failure status code is returned along with None in place of the
+            requested Fepops descriptors.
 
         Returns
         -------
@@ -65,15 +88,23 @@ class FepopsCMDLineInterface:
             f = OpenFEPOPS()
             print(f.calc_similarity(smi1, smi2))
 
-    def save_descriptors(self, smi):
-        """Pregenerate FEPOPS descriptors for a set of SMILES strings"""
+    def save_descriptors(self, smi: str):
+        """Pregenerate FEPOPS descriptors for a set of SMILES strings
+
+        Parameters
+        ----------
+        smi :
+            String containing the path to a SMILES file which should be read in
+            and have each molecule with in added to the database
+        """
         f_persistent = get_persistent_fepops_storage_object(self.database)
         f_persistent.save_descriptors(smi)
         if self.database_file.endswith((".json")):
             f_persistent.write()
 
     def dude_preprocessor(self, dude_directory: str = "data/dude/"):
-        """Access functions for preparation and benchmarking of the DUDE dataset
+        """Access a dude preprocessor object for preprocessing and preparation
+        of the DUDE benchmarking dataset
 
         The DUDE dataset consists of 102 targets, 22,886 active compounds along with
         decoys, bringing the total number of molecules to 1,434,022.
@@ -86,8 +117,10 @@ class FepopsCMDLineInterface:
 
 
 def fepops_entrypoint():
+    """Entrypoint for the fepops module"""
     fire.Fire(FepopsCMDLineInterface)
 
 
 if __name__ == '__main__':
+    """Entrypoint if run directly with the Python interpreter"""
     fire.Fire(FepopsCMDLineInterface)

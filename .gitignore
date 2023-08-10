@@ -72,9 +72,6 @@ instance/
 # Scrapy stuff:
 .scrapy
 
-# Sphinx documentation
-docs/_build/
-
 # PyBuilder
 .pybuilder/
 target/
@@ -169,3 +166,6 @@ data/
 /*.prof
 /_*.py
 /_*.ipynb
+# Sphinx documentation
+docsource/_build/
+docs

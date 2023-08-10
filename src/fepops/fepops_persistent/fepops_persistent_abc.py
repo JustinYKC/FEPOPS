@@ -15,56 +15,87 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
     """Abstract base class for persistent fepops storage
 
     New storage methods may be implemented as demonstrated in fepopsdb_json.py
-    by extending this abstract base class which provides some required
-    functionality like:
+    or in fepopsdb_sqlite.py by extending this abstract base class which
+    provides some required functionality like:
 
-    - save_descriptors(smiles: Union[str, Path, list[str]]), to save a smiles file/list of smiles to the persistent storage
-    - get_cansmi_to_mol_dict_not_in_database(smiles: Union[str, Path, list[str]]), to retrieve a unique dictionary with canonical smiles as keys not already stored in the database and rdkit mol objects as values.
+    - save_descriptors(smiles: Union[str, Path, list[str]]) to save a smiles
+        file/list of smiles to the persistent storage
+    - get_cansmi_to_mol_dict_not_in_database(smiles: Union[str, Path, list[str]])
+        to retrieve a unique dictionary with canonical smiles as keys not already
+        stored in the database and rdkit mol objects as values.
 
-    When writing your own persistent storage methods, you must override the following methods:
+    When writing your own persistent storage methods, you must override the
+    following methods:
 
     add_fepop(rdkit_canonical_smiles: str, fepops: np.ndarray)
     ----------------------------------------------------------
-    Add the fepop to persistent storage. super().add_fepop may be called by the overridden function to perform type checks on arguments.
+    Add the fepop to persistent storage. super().add_fepop may be called by the
+    overridden function to perform type checks on arguments.
 
     fepop_exists(rdkit_canonical_smiles: str)
     -----------------------------------------
-    Return True if the canonical smiles is already in the database, and False if not. super().fepop_exists may be called by the overridden
-    function to perform type checks on arguments.
+    Return True if the canonical smiles is already in the database, and False if
+    not. super().fepop_exists may be called by the overridden function to
+    perform type checks on arguments.
 
     get_fepops(rdkit_canonical_smiles: str)
-    --------------------------------------
-    Return a fepop from persistent storage. If it does not exist, then generate it by calling self.fepops_object.get_fepops which is supplied
-    by this base class. super().get_fepops may be called by the overridden function to perform type checks on arguments.
-    With this function in place it allows interface compatibility with a standard Fepops object.
+    ---------------------------------------
+    Return a fepop from persistent storage. If it does not exist, then generate
+    it by calling self.fepops_object.get_fepops which is supplied by this base
+    class. super().get_fepops may be called by the overridden function to
+    perform type checks on arguments. With this function in place it allows
+    interface compatibility with a standard Fepops object.
 
-    Inheriting functions may also define __enter__ and __exit__ methods for use with context handlers. If none are defined, then empty ones
-    are provided. This can be useful in doing things like writing out large files after descriptor generation if incremental writes are not
-    possible, like in the case of the FepopsDBJSON child class.
-
+    Inheriting functions may also define __enter__ and __exit__ methods for use
+    with context handlers. If none are defined, then empty ones are provided.
+    This can be useful in doing things like writing out large files after
+    descriptor generation if incremental writes are not possible, like in the
+    case of the FepopsDBJSON child class.
 
     Parameters
     ----------
     database_file : Union[str, Path]
-            File to use for persistent storage.
+        File to use for persistent storage.
     kmeans_method : str, optional
-            Method which should be used for kmeans calculation by
-            fepops objects, can be one of "sklearn", "pytorchgpu",
-            or "pytorchcpu".
+        Method which should be used for kmeans calculation by
+        fepops objects, can be one of "sklearn", "pytorchgpu",
+        or "pytorchcpu".
     parallel : bool, optional
-            Run in parallel (using joblib), by default True
+        Run in parallel (using joblib), by default True
     n_jobs : int, optional
-            Number of jobs to be spawned with joblib. If -1, then use
-            all available cores. By default -1.
+        Number of jobs to be spawned with joblib. If -1, then use
+        all available cores. By default -1
+    
     """
 
     @staticmethod
-    def _parallel_init_worker_get_cansmi_mol_tuple(smiles_is_rdkit_canonical):
+    def _parallel_init_worker_get_cansmi_mol_tuple(smiles_is_rdkit_canonical: bool):
+        """Static method for initialisation of smiles and mol tuple workers
+
+        Parameters
+        ----------
+        smiles_is_rdkit_canonical : bool
+            If True, then the supplied SMILES are guaranteed to be canonical and
+            generated by RDKit
+        """
         global sirdkc
         sirdkc = smiles_is_rdkit_canonical
 
     @staticmethod
     def _parallel_get_cansmi_tuple(m):
+        """Static method for worker threads to get smiles and mol tuples
+
+        Parameters
+        ----------
+        m : str
+            Molecule as a smiles string
+
+        Returns
+        -------
+        tuple[str, rdkit.Chem.Mol]
+            Tuple containing an RDKit canonical SMILES string and the RDKit mol
+            constructed by it
+        """
         global sirdkc
         return FepopsPersistentAbstractBaseClass._get_can_smi_mol_tuple(
             m, smiles_guaranteed_rdkit_canonical=sirdkc
@@ -72,11 +103,31 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
 
     @staticmethod
     def _parallel_init_worker_desc_gen_shared_fepops_ob(fepops_object):
+        """Static method for FEPOPS descriptor worker processes initialisation
+
+        Parameters
+        ----------
+        fepops_object : OpenFEPOPS
+            Initialised OpenFEPOPS object which should be used to generate
+            descriptors
+        """
         global shared_fepops_ob
         shared_fepops_ob = fepops_object
 
     @staticmethod
     def _parallel_get_gen_fepops_descriptors(m):
+        """Static method for worker processes to generate FEPOPS descriptors
+
+        Parameters
+        ----------
+        m : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         global shared_fepops_ob
         return m[0], shared_fepops_ob.get_fepops(m[1])
 
@@ -88,6 +139,21 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
         parallel: bool = True,
         n_jobs: int = -1,
     ):
+        """FepopsPersistentABC constructor for storing initialisation parameters
+
+        Parameters
+        ----------
+        database_file : Union[str, Path]
+            Location of the database file as a string or Path object
+        kmeans_method : str, optional
+            Method to use for calculation of FEPOPS, by default "sklearn"
+        parallel : bool, optional
+            If calculations should be done making use of multiple CPU cores, by
+            default True
+        n_jobs : int, optional
+            Number of worker processes to spawn. If -1, then the optimum is
+            detected automatically, by default -1
+        """
         self.database_file = Path(database_file)
         self.fepops_object = OpenFEPOPS(kmeans_method=kmeans_method)
         self.parallel = parallel
@@ -100,8 +166,25 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
         smiles_guaranteed_rdkit_canonical: bool = False,
         fepops_object_constructor_kwargs: dict = {},
     ):
-        """Pregenerate FEPOPS descriptors for a set of SMILES strings"""
+        """Pregenerate FEPOPS descriptors for a set of SMILES strings
 
+        Parameters
+        ----------
+        smiles : Union[str, Path, list[str]]
+            String containing the path to a SMILES file which should be read in
+            and have each molecule with in added to the database
+        add_failures_to_database: bool
+            If True, then a record is kept in the database for SMILES which
+            were problematic and FEPOPS descriptor generation failed for, by
+            default True
+        smiles_guaranteed_rdkit_canonical : bool
+            If True, then the supplied SMILES are guaranteed to be canonical
+            SMILES generated by RDKit which allows skipping of a sanitisation
+            step, by default False
+        fepops_object_constructor_kwargs: dict
+            Dictionary of kwargs which will be passed to the FEPOPS object upon
+            initialisation, by default {}
+        """
         canonical_smiles_to_mol_dict = self.get_cansmi_to_mol_dict_not_in_database(
             smiles, smiles_guaranteed_rdkit_canonical=smiles_guaranteed_rdkit_canonical
         )
@@ -146,9 +229,11 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
 
     @abstractmethod
     def add_fepop(self, rdkit_canonical_smiles: str, fepops: np.ndarray):
-        """Add canonical smiles and fepop to database.
+        """Add canonical smiles and fepop to database. Must be overridden
 
-        Must be overridden
+        This abstractmethod must be overridden by the inheriting object, but
+        provides some functionality for sanity checking input and may be called
+        by the inheriting class.
         """
         if not isinstance(rdkit_canonical_smiles, str):
             raise ValueError(
@@ -161,6 +246,21 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
     def get_fepops(
         self, smiles: Union[str, Chem.rdchem.Mol, np.ndarray], is_canonical: bool = True
     ) -> None:
+        """Get a FEPOP from the database using its SMILES. Must be overridden
+
+        This abstractmethod must be overridden by the inheriting object, but
+        provides some functionality for sanity checking input and may be called
+        by the inheriting class.
+
+        Parameters
+        ----------
+        smiles : Union[str, Chem.rdchem.Mol, np.ndarray]
+            _description_
+        is_canonical : bool, optional
+            If True, then the supplied SMILES are guaranteed to be canonical
+            SMILES generated by RDKit which allows skipping of a sanitisation
+            step, by default True
+        """
         if not isinstance(smiles, (str, Chem.rdchem.Mol, np.ndarray)):
             raise ValueError(
                 f"Expected an rdkit canonical smiles string, rdkit mol, or a numpy array of descriptors but a {type(smiles)} was passed: {smiles}"
@@ -168,7 +268,12 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
 
     @abstractmethod
     def fepop_exists(self, rdkit_canonical_smiles: str) -> bool:
-        """Return True if canonical smiles already exist in the database"""
+        """Return True if canonical smiles already exist in the database
+
+        This abstractmethod must be overridden by the inheriting object, but
+        provides some functionality for sanity checking input and may be called
+        by the inheriting class.
+        """
         if not isinstance(rdkit_canonical_smiles, str):
             raise ValueError(
                 f"Expected an rdkit canonical smiles string, but a {type(rdkit_canonical_smiles)} was passed"
@@ -196,6 +301,29 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
         smiles: Union[str, Path, list[str]],
         smiles_guaranteed_rdkit_canonical: bool = False,
     ):
+        """Get smiles to mol dict for smiles not in the database
+
+        Parameters
+        ----------
+        smiles : Union[str, Path, list[str]]
+            If a string is passed, then it is assumed to be a file path of
+            SMILES file and this file is loaded for processing. Similarly, Path
+            objects are assumed to point at SMILES files for processing. If
+            passing smiles strings to this function, the wrap the string in a
+            list (making a list containing only one element), or provide large
+            multi-SMILES lists which will be operated upon directly
+        smiles_guaranteed_rdkit_canonical : bool, optional
+            If the supplied SMILES are canonical RDKit-generated SMILES, then
+            regeneration of these SMILES strings for uniquification and database
+            lookup may be skipped, by default False
+
+        Returns
+        -------
+        dict
+            Dictionary with SMILES as keys and RDKit molecules as the values for
+            molecules not present in the current database
+
+        """
         if isinstance(smiles, str):
             smiles = Path(smiles)
         if isinstance(smiles, Path):
