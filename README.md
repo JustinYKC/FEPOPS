@@ -77,7 +77,7 @@ With a SMILES file called 'inhouse_compounds.smi', we may pre-generate their FEP
 fepops --database_file=inhouse_compounds.db save_descriptors inhouse_compounds.smi
 ```
 
-# Requirements
+## Requirements
 This FEPOPS implementation requires the following packages:
 - rdkit (>=2019.09.x.x)
 - numpy (>=1.19.x)
