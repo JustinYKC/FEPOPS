@@ -167,5 +167,10 @@ data/
 /_*.py
 /_*.ipynb
 # Sphinx documentation
-docsource/_build/
+docsource/*
+!docsource/conf.py
+!docsource/index.rst
+!docsource/modules.rst
+!docsource/Makefile
+!docsource/make
 docs

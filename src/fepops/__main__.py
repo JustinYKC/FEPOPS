@@ -97,7 +97,7 @@ class FepopsCMDLineInterface:
             String containing the path to a SMILES file which should be read in
             and have each molecule with in added to the database
         """
-        f_persistent = get_persistent_fepops_storage_object(self.database)
+        f_persistent = get_persistent_fepops_storage_object(self.database_file)
         f_persistent.save_descriptors(smi)
         if self.database_file.endswith((".json")):
             f_persistent.write()
