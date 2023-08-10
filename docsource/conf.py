@@ -29,8 +29,8 @@ with readme_target.open("w") as outf:
     )
     lines = []
     for line in readme_path.read_text().split("\n")[1:]:
-        # if line.startswith("# "):
-        #     continue
+        if line.startswith("#"):
+            line=line[1:]
         if "Figure1.png" in line:
             line=line.replace("Figure1.png", "_static/Figure1.png")
         lines.append(line)

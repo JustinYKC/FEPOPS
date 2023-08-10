@@ -173,4 +173,7 @@ docsource/*
 !docsource/modules.rst
 !docsource/Makefile
 !docsource/make
+!docsource/fepops.rst
+!docsource/modules.rst
+!docsource/fepops.fepops_persistent.rst
 docs
