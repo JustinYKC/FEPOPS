@@ -174,15 +174,15 @@ class FepopsDBSqlite(FepopsPersistentAbstractBaseClass):
                 return GetFepopStatusCode.SUCCESS, fepop.reshape(
                     -1,
                     (
-                        self.fepops_object.num_centroids_per_fepop
-                        * self.fepops_object.num_features_per_fepop
+                        self.openfepops_object.num_centroids_per_fepop
+                        * self.openfepops_object.num_features_per_fepop
                     )
-                    + self.fepops_object.num_distances_per_fepop,
+                    + self.openfepops_object.num_distances_per_fepop,
                 )
         else:
             if mol is None:
                 mol = rdkit_canonical_smiles
-            status, fepops_descriptors = self.fepops_object.get_fepops(mol)
+            status, fepops_descriptors = self.openfepops_object.get_fepops(mol)
             if status == GetFepopStatusCode.SUCCESS:
                 self.add_fepop(
                     rdkit_canonical_smiles=rdkit_canonical_smiles,

@@ -662,7 +662,7 @@ class OpenFEPOPS:
             angles of rotetable bonds
 
         """
-        
+
         try:
             mol = Chem.AddHs(mol)
             params = AllChem.ETKDGv3()
@@ -894,6 +894,10 @@ class OpenFEPOPS:
         np.ndarray
             2D matrix containing A vs B feature correlations
         """
+        if len(A)<len(B):
+            A=np.pad(A, (0,len(B)-len(A)), mode='constant', constant_values=0)
+        if len(B)<len(A):
+            B=np.pad(B, (0,len(A)-len(B)), mode='constant', constant_values=0)
         am = A - np.mean(A, axis=0, keepdims=True)
         bm = B - np.mean(B, axis=0, keepdims=True)
         return (

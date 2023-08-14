@@ -65,7 +65,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
     n_jobs : int, optional
         Number of jobs to be spawned with joblib. If -1, then use
         all available cores. By default -1
-    
+
     """
 
     @staticmethod
@@ -155,7 +155,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
             detected automatically, by default -1
         """
         self.database_file = Path(database_file)
-        self.fepops_object = OpenFEPOPS(kmeans_method=kmeans_method)
+        self.openfepops_object = OpenFEPOPS(kmeans_method=kmeans_method)
         self.parallel = parallel
         self.n_jobs = n_jobs
 
@@ -195,7 +195,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
             for rdkit_canonical_smiles, mol in tqdm(
                 canonical_smiles_to_mol_dict.items(), desc="Generating fepops"
             ):
-                status, fepops_array = self.fepops_object.get_fepops(mol)
+                status, fepops_array = self.openfepops_object.get_fepops(mol)
                 if status == GetFepopStatusCode.SUCCESS or add_failures_to_database:
                     self.add_fepop(rdkit_canonical_smiles, fepops_array)
             print(
@@ -427,7 +427,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
                 new_fepops_features_2.append(
                     fpop if status == GetFepopStatusCode.SUCCESS else None
                 )
-            return self.fepops_object.calc_similarity(
+            return self.openfepops_object.calc_similarity(
                 fepops_features_1, new_fepops_features_2
             )
 
@@ -439,7 +439,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
                 return np.nan
         if any(x is None for x in (fepops_features_1, fepops_features_2)):
             return np.nan
-        score = self.fepops_object.calc_similarity(fepops_features_1, fepops_features_2)
+        score = self.openfepops_object.calc_similarity(fepops_features_1, fepops_features_2)
         return score if score is not None else np.nan
 
     def write(self):

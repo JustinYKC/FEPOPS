@@ -7,7 +7,7 @@ def get_persistent_fepops_storage_object(
     database_file: Union[str, Path],
     parallel: bool = True,
     n_jobs: int = -1,
-):
+) -> Union[FepopsDBSqlite, FepopsDBJSON]:
     if str(database_file).endswith(
         (".sqlite", ".sqlite3", ".db", ".db3", ".s3db", ".sl3")
     ):

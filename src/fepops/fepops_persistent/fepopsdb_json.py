@@ -108,11 +108,11 @@ class FepopsDBJSON(FepopsPersistentAbstractBaseClass):
             else:
                 return res.reshape(
                     -1,
-                    self.fepops_object.num_centroids_per_fepop
-                    * self.fepops_object.num_features_per_fepop,
+                    self.openfepops_object.num_centroids_per_fepop
+                    * self.openfepops_object.num_features_per_fepop,
                 )
         else:
-            new_fepops = self.fepops_object.get_fepops(mol)
+            new_fepops = self.openfepops_object.get_fepops(mol)
             self.add_fepop(rdkit_canonical_smiles=smiles, fepops=new_fepops)
             return new_fepops
 
