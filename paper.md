@@ -59,14 +59,7 @@ The OpenFEPOPS descriptor generation process as outlined in \autoref{fig:descrip
 
 ![OpenFEPOPS descriptor generation showing the capture of tautomer and conformer information from a single input molecule.\label{fig:descriptor_generation}](Figure1.png)
 
-*OpenFEPOPS descriptor generation showing the capture of tautomer and conformer information from a single input molecule*
-
-<br>
-
-
 Descriptor generation with OpenFEPOPS is a compute intensive task and as noted in literature, designed to be run in situations where large compound archives have had their descriptors pre-generated and are queried against realatively small numbers of new molecules for which descriptors are not known and are generated. To enable use in this manner, OpenFEPOPS provides functionality to cache descriptors through specification of database files, either in the SQLite or JSON formats.
-
-
 
 ## Scoring and comparison of molecules based on their molecular descriptors
 
@@ -79,7 +72,7 @@ Descriptor generation with OpenFEPOPS is a compute intensive task and as noted i
 
 Literature highlights that the choice of the Pearson correlation coefficient leads to high background scores as it is highly unlikely to see little correlation between any molecule due to fundamental limitations of chemistry and geometry. Therefore, unrelated molecules are likely to have FEPOPS similarity scores higher than those encountered with more traditional techniques such as bitstring fingeprints and Tanimoto or Dice similarity measures.
 
-The predictive performance of OpenFEPOPS has been evaluated using the DUDE [] diversity set. This dataset comprises eight protein targets accompanied by decoy ligands and known active ligands. Macro-averaged AUROC scores for each target were generated using every known active small molecule to retrieve the entire set of actives for the target. Table 1 shows the average AUROC scores for DUDE diversity set targets along with scores obtained using the popular Morgan 2, MACCS, and RDKit fingerprints as implemented in RDKit and scored using the Tanimoto distance metric. See the Jupyter notebook dude_benchmarking.ipynb in the source repository for further methods and details. 
+The predictive performance of OpenFEPOPS has been evaluated using the DUDE [@mysinger2012directory] diversity set. This dataset comprises eight protein targets accompanied by decoy ligands and known active ligands. Macro-averaged AUROC scores for each target were generated using every known active small molecule to retrieve the entire set of actives for the target. Table 1 shows the average AUROC scores for DUDE diversity set targets along with scores obtained using the popular Morgan 2, MACCS, and RDKit fingerprints as implemented in RDKit and scored using the Tanimoto distance metric. See the Jupyter notebook 'Explore_DUDE_diversity_set.ipynb' in the source repository for further methods and details. 
 
 |  | Morgan 2 | MACCS | RDKit |OpenFEPOPS|
 |--------:|----------:|-------:|-------:|------------:|
@@ -92,7 +85,7 @@ The predictive performance of OpenFEPOPS has been evaluated using the DUDE [] di
 |hivrt |0.651|0.670 |0.660 |0.584|
 |kif11 |0.763|0.668 |0.672  |0.713|
 
-*Table 1 - Macro averaged AUROC scores by target and molecular similarity technique for the DUDE diversity set*
+**Table 1:** Macro averaged AUROC scores by target and molecular similarity technique for the DUDE diversity set. Across all datasets, 19 small molecules out of 112,796 were excluded from analysis either due to issues in parsing to valid structures using RDKit, or failed in OpenFEPOPS descriptor generation.
 
 
 ## Availability, usage and documentation
