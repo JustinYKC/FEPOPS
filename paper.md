@@ -85,7 +85,7 @@ The predictive performance of OpenFEPOPS has been evaluated using the DUDE [@mys
 |hivrt |0.651|0.670 |0.660 |0.584|
 |kif11 |0.763|0.668 |0.672  |0.713|
 
-**Table 1:** Macro averaged AUROC scores by target and molecular similarity technique for the DUDE diversity set. Across all datasets, 19 small molecules out of 112,796 were excluded from analysis either due to issues in parsing to valid structures using RDKit, or failed in OpenFEPOPS descriptor generation.
+**Table 1:** Macro averaged AUROC scores by target and molecular similarity technique for the DUDE diversity set. Across all datasets, 19 small molecules out of 112,796 were excluded from analysis mainly due to issues in parsing to valid structures using RDKit.
 
 
 ## Availability, usage and documentation
