@@ -4,6 +4,21 @@ OpenFEPOPS is an open-source Python implementation of the FEPOPS molecular simil
 
 At the time of writing, `OpenFEPOPS` is the only publicly available implementation of the FEPOPS molecular similarity technique. Whilst used within industry and referenced extensively in literature, it has been unavailable to researchers as an open-source tool. This truly open implementation allows researchers to use and contribute to the advancement of FEPOPS within the rapid development and collaborative framework provided by open-source software. It is therefore hoped that this will allow the technique to be used not only for traditional small molecule molecular similarity, but also in new emerging fields such as protein design and featurization of small- and macro-molecules for both predictive and generative tasks.
 
+OpenFEPOPS has been benchmarked alongside some commonly used fingerprints against the DUDE diversity set and scores as follows:
+
+| Target | Morgan 2 | MACCS | RDKit |OpenFEPOPS|
+|--------:|----------:|-------:|-------:|------------:|
+|akt1  |0.836|0.741 |0.833 |0.829|
+|ampc  |0.784|0.673|0.660 |0.639|
+|cp3a4 |0.603|0.582|0.613 |0.650|
+|cxcr4 |0.697|0.854|0.592 |0.899|
+|gcr   |0.670|0.666|0.708  |0.616|
+|hivpr |0.780|0.681|0.759 |0.678|
+|hivrt |0.651|0.670 |0.660 |0.584|
+|kif11 |0.763|0.668 |0.672  |0.713|
+
+*Macro averaged AUROC scores by target and molecular similarity technique for the DUDE diversity set. Across all datasets, 19 small molecules out of 112,796 were excluded from analysis mainly due to issues in parsing to valid structures using RDKit.  See 'Explore_DUDE_diversity_set.ipynb' for further information*
+
 ## Method description
 Whilst OpenFEPOPS has included functionality for descriptor caching and profiling of libraries, the core functionality of the package is descriptor generation and scoring.
 ### _Descriptor generation:_
