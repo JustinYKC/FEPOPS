@@ -33,8 +33,37 @@ Descriptor generation with OpenFEPOPS is a compute intensive task and as noted i
 
 Literature highlights that the choice of the Pearson correlation coefficient leads to high background scores as it is highly unlikely to see little correlation between any molecule due to fundamental limitations of chemistry and geometry. Therefore, unrelated molecules are likely to have FEPOPS similarity scores higher than those encountered with more traditional techniques such as bitstring fingeprints and Tanimoto or Dice similarity measures.
 
-## Usage
+## Installation
+OpenFEPOPS requires Python >=3.9 and may be installed using pip:
+```console
+pip install fepops
+```
+Alternatively, OpenFEPOPS can be installed from source:
+```console
+git clone https://github.com/JustinYKC/FEPOPS.git
+cd FEPOPS
+pip install .
+```
 
+Or via conda :
+```console
+conda env create -f environment.yml
+```
+
+### Requirements:
+OpenFEPOPS requires the following packages:
+- rdkit (>=2021.9.5.1)
+- numpy (>=1.22.4)
+- pandas (>=1.5.0)
+- scikit-learn (>=1.3.x)
+- scipy (>=1.7.x)
+- torch (>=1.7.1)
+- fast-pytorch-kmeans (>=0.1.9)
+- fire (>=0.5.x)
+- tqdm (>=4.48.0)
+
+
+## Usage
 OpenFEPOPS has been uploaded to the Python Packaging Index under the name 'fepops' and as such is installable using the pip package manager and the command 'pip install fepops'. With the package installed, entrypoints are used to expose commonly used OpenFEPOPS tasks such as descriptor generation and calculation on molecular similarity, enabling simple command line access without the need to explicitly invoke a Python interpreter. Whilst OpenFEPOPS may be used solely via the command line interface, a robust API is available and may be used within other programs or integrated into existing pipelines to enable more complex workflows.  API documentation is available at https://justinykc.github.io/FEPOPS.
 
 ### Command line usage:
@@ -76,15 +105,3 @@ With a SMILES file called 'inhouse_compounds.smi', we may pre-generate their FEP
 ```console
 fepops --database_file=inhouse_compounds.db save_descriptors inhouse_compounds.smi
 ```
-
-## Requirements
-This FEPOPS implementation requires the following packages:
-- rdkit (>=2019.09.x.x)
-- numpy (>=1.19.x)
-- pandas (>=1.5.0)
-- scikit-learn (>=0.20.x)
-- scipy (>=1.7.x)
-- PyTorch (>=1.0.0)
-- fast-pytorch-kmeans (>=0.1.9)
-- tqdm (>=4.48.0)
-
