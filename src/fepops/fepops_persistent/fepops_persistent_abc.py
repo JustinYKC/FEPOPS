@@ -286,7 +286,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
         except:
             try:
                 mol = Chem.MolFromSmiles(s, sanitize=False)
-            finally:
+            except:
                 mol = None
         if mol is None:
             print(f"Could not parse smiles to a valid molecule, smiles was: {s}")
