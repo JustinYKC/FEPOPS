@@ -61,3 +61,6 @@ dev = [
     'pytest==7.4.0',
     'build==0.10.0',
 ]
+
+[tool.pytest.ini_options]
+"testpaths" = "tests/test*"
