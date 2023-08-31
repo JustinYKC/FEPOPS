@@ -72,6 +72,14 @@ Or via conda :
 conda env create -f environment.yml
 ```
 
+Requirements for developing and contributing to OpenFEPOPS can be installed from source:
+```console
+git clone https://github.com/JustinYKC/FEPOPS.git
+cd FEPOPS
+pip install .[dev]
+```
+
+
 ### Requirements:
 OpenFEPOPS requires the following packages:
 - rdkit (>=2021.9.5.1)
