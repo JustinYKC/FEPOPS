@@ -219,10 +219,14 @@ class OpenFEPOPS:
         ValueError
             Invalid kmeans method
         """
-
-        self.descriptor_means = descriptor_means
-        self.descriptor_stds = descriptor_stds
-
+        # Descriptor stds may contain zeros. If they do, then we mimic Scikit-Learn's
+        # StandardScaler, whereby if unit variance is not achievable, no scaling is
+        # applied (value of 1.0)
+        self.descriptor_stds_no_zeros = np.array(descriptor_stds)
+        self.descriptor_stds_no_zeros[self.descriptor_stds_no_zeros==0.0] = 1.0
+        self.descriptor_means = np.array(descriptor_means)
+        
+        
         try:
             self.kmeans_func = getattr(self, f"_perform_kmeans_{kmeans_method}")
         except:
@@ -282,31 +286,33 @@ class OpenFEPOPS:
         if input_x.shape[0] <= k:
             return input_x
 
-        point_to_centroid_map = np.ones(input_x.shape[0])
+        # Apply standard scaling to FEPOP features. Behaviour when std dev is 0 mimics
+        # Scikit-Learn's StandardScaler, whereby if unit variance is not achievable, no
+        # scaling is applied (value of 1.0)
+        input_x_std=np.std(input_x, axis=0)
+        input_x_std[input_x_std == 0.0] = 1.0
+        X = (input_x - np.mean(input_x, axis=0)) / input_x_std
+        point_to_centroid_map = np.ones(X.shape[0])
         point_to_centroid_map_prev = np.zeros_like(point_to_centroid_map)
 
         np_rng = np.random.default_rng(seed=random_state)
-        medoids = input_x[
-            np_rng.choice(np.arange(input_x.shape[0]), size=k, replace=False), :
-        ]
+        medoids = X[np_rng.choice(np.arange(X.shape[0]), size=k, replace=False), :]
 
         while (point_to_centroid_map != point_to_centroid_map_prev).any():
             point_to_centroid_map_prev = point_to_centroid_map
-            point_to_centroid_map = np.argmin(
-                np.square(cdist(input_x, medoids)), axis=1
-            )
+            point_to_centroid_map = np.argmin(np.square(cdist(X, medoids)), axis=1)
             for i in range(k):
-                medoid_members = input_x[point_to_centroid_map == i]
+                medoid_members = X[point_to_centroid_map == i]
                 if len(medoid_members) == 0:
-                    chosen_x_point = np_rng.choice(np.arange(input_x.shape[0]))
-                    medoids[i] = input_x[chosen_x_point, :]
+                    chosen_x_point = np_rng.choice(np.arange(X.shape[0]))
+                    medoids[i] = X[chosen_x_point, :]
                     point_to_centroid_map[chosen_x_point] = i
-                medoids[i] = np.median(input_x[point_to_centroid_map == i], axis=0)
+                medoids[i] = np.median(X[point_to_centroid_map == i], axis=0)
         # Sorting at this stage for reproducibility with existing pregenerated
         # descriptor sets and convention with early FEPOPS versions which relied
         # upon FEPOPS within a molecule being sorted by charge (before moving to
         # the newer CombiAlign scoring algorithm)
-        return medoids[np.lexsort(medoids.T[::-1])]
+        return input_x[np.lexsort(medoids.T[::-1])]
 
     def _calculate_atomic_logPs(self, mol: Chem.rdchem.Mol) -> dict:
         """Calculate logP contribution for each of atom in a molecule
@@ -961,12 +967,9 @@ class OpenFEPOPS:
             raise ValueError(
                 "candidate was not, or could not be coerced into a np.ndarray"
             )
-        q = np.nan_to_num(
-            ((query - self.descriptor_means) / self.descriptor_stds), nan=1e-9
-        )
-        c = np.nan_to_num(
-            (candidate - self.descriptor_means) / self.descriptor_stds, nan=1e-9
-        )
+
+        q = (query - self.descriptor_means) / self.descriptor_stds_no_zeros
+        c = (candidate - self.descriptor_means) / self.descriptor_stds_no_zeros
         return self.pairwise_correlation(q.flatten(), c.flatten())
 
     def __call__(
