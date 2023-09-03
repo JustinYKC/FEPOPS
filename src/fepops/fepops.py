@@ -123,16 +123,15 @@ class OpenFEPOPS:
             6.47293777,
             6.26134733,
             6.20354385,
-            6.23201498
+            6.23201498,
         ),
-        
         descriptor_stds: Tuple[float, ...] = (
             0.35110473,
             1.00839329,
             0.4838859,
             0.02769204,
             0.15418035,
-            0.86446056, 
+            0.86446056,
             0.44583626,
             0.0381767,
             0.16095862,
@@ -148,8 +147,8 @@ class OpenFEPOPS:
             2.50699385,
             2.41269982,
             2.30018205,
-            2.31527129
-            )
+            2.31527129,
+        ),
     ):
         """OpenFEPOPS (Feature Points) molecular similarity object
 
@@ -224,10 +223,9 @@ class OpenFEPOPS:
         # StandardScaler, whereby if unit variance is not achievable, no scaling is
         # applied (value of 1.0)
         self.descriptor_stds_no_zeros = np.array(descriptor_stds)
-        self.descriptor_stds_no_zeros[self.descriptor_stds_no_zeros==0.0] = 1.0
+        self.descriptor_stds_no_zeros[self.descriptor_stds_no_zeros == 0.0] = 1.0
         self.descriptor_means = np.array(descriptor_means)
-        
-        
+
         try:
             self.kmeans_func = getattr(self, f"_perform_kmeans_{kmeans_method}")
         except:
@@ -290,7 +288,7 @@ class OpenFEPOPS:
         # Apply standard scaling to FEPOP features. Behaviour when std dev is 0 mimics
         # Scikit-Learn's StandardScaler, whereby if unit variance is not achievable, no
         # scaling is applied (value of 1.0)
-        input_x_std=np.std(input_x, axis=0)
+        input_x_std = np.std(input_x, axis=0)
         input_x_std[input_x_std == 0.0] = 1.0
         X = (input_x - np.mean(input_x, axis=0)) / input_x_std
         point_to_centroid_map = np.ones(X.shape[0])
@@ -901,10 +899,10 @@ class OpenFEPOPS:
         np.ndarray
             2D matrix containing A vs B feature correlations
         """
-        if len(A)<len(B):
-            A=np.pad(A, (0,len(B)-len(A)), mode='constant', constant_values=0)
-        if len(B)<len(A):
-            B=np.pad(B, (0,len(A)-len(B)), mode='constant', constant_values=0)
+        if len(A) < len(B):
+            A = np.pad(A, (0, len(B) - len(A)), mode='constant', constant_values=0)
+        if len(B) < len(A):
+            B = np.pad(B, (0, len(A) - len(B)), mode='constant', constant_values=0)
         am = A - np.mean(A, axis=0, keepdims=True)
         bm = B - np.mean(B, axis=0, keepdims=True)
         return (
