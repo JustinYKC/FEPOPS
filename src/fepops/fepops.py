@@ -202,7 +202,7 @@ class OpenFEPOPS:
             0.09701198,1.12969387,0.23718642,0.99865705,0.35968991,0.6649304,
             0.4123743,0.99893657,5.70852885,6.3707943,6.47354071,6.26385429,
             6.19229367,6.22946713)
-        descriptor_sds : Tuple[float, ...], optional
+        descriptor_stds : Tuple[float, ...], optional
             Due to the need to apply scaling to FEPOPS, the DUDE diversity set has
             been profiled and the means collected for all contained FEPOPS. This
             this allows centering and scaling of FEPOPS before scoring. This field
