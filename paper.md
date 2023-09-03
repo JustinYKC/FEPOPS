@@ -74,15 +74,15 @@ Literature highlights that the choice of the Pearson correlation coefficient lea
 
 The predictive performance of OpenFEPOPS has been evaluated using the DUDE [@mysinger2012directory] diversity set. This dataset comprises eight protein targets accompanied by decoy ligands and known active ligands. Macro-averaged AUROC scores for each target were generated using  known actives to retrieve the entire set of actives for the target. Table 1 shows the average AUROC scores for DUDE diversity set targets along with scores obtained using the popular Morgan 2, MACCS, and RDKit fingerprints as implemented in RDKit and scored using the Tanimoto distance metric. See the Jupyter notebook 'Explore_DUDE_diversity_set.ipynb' in the source repository for further methods and data availability using the FigShare service. 
 
-|  | Morgan 2 | MACCS | RDKit |OpenFEPOPS|
+| Target | Morgan 2 | MACCS | RDKit |OpenFEPOPS|
 |--------:|----------:|-------:|-------:|------------:|
-|akt1  |0.836|0.741 |0.833 |0.829|
+|akt1  |0.836|0.741 |0.833 |0.831|
 |ampc  |0.784|0.673|0.660 |0.639|
-|cp3a4 |0.603|0.582|0.613 |0.650|
+|cp3a4 |0.603|0.582|0.613 |0.647|
 |cxcr4 |0.697|0.854|0.592 |0.899|
 |gcr   |0.670|0.666|0.708  |0.616|
 |hivpr |0.780|0.681|0.759 |0.678|
-|hivrt |0.651|0.670 |0.660 |0.584|
+|hivrt |0.651|0.670 |0.660 |0.582|
 |kif11 |0.763|0.668 |0.672  |0.713|
 
 **Table 1:** Macro averaged AUROC scores by target and molecular similarity technique for the DUDE diversity set. Across all datasets, 19 small molecules out of 112,796 were excluded from analysis mainly due to issues in parsing to valid structures using RDKit.
