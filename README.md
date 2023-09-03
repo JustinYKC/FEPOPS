@@ -79,7 +79,14 @@ cd FEPOPS
 pip install .[dev]
 ```
 
+### Testing
+Tests may be run using the pytest framework. With the development dependencies installed (see above), simply running:
 
+```console
+pytest
+```
+
+will run the built in tests.
 ### Requirements:
 OpenFEPOPS requires the following packages:
 - rdkit (>=2021.9.5.1)

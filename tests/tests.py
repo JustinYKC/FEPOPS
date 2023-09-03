@@ -1,6 +1,7 @@
 """Initial framework of FEPOPS test suite"""
 
 from pathlib import Path
+import numpy as np
 from fepops import OpenFEPOPS
 from fepops.fepops import GetFepopStatusCode
 from fepops.fepops_persistent import get_persistent_fepops_storage_object
@@ -60,3 +61,5 @@ def test_fepops_persistent_sqlite(test_mol_smiles, tmp_path):
     }
     file.unlink(missing_ok=True)
     assert fepops_dict.keys() == fepops_dict2.keys()
+    for k in fepops_dict.keys():
+        np.testing.assert_array_equal(fepops_dict[k], fepops_dict2[k])
