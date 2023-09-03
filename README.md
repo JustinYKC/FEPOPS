@@ -28,7 +28,7 @@ OpenFEPOPS has been benchmarked alongside some commonly used fingerprints agains
 
 ## Method description
 Whilst OpenFEPOPS has included functionality for descriptor caching and profiling of libraries, the core functionality of the package is descriptor generation and scoring.
-### _Descriptor generation:_
+### _Descriptor generation_
 
 1. Tautomer enumeration
     - For a given small molecule, OpenFEPOPS uses RDKit to iterate over molecular tautomers. By default, there is no limit to the number of recoverable tautomers but a limit may be imposed which may be necessary if adapting the OpenFEPOPS code to large macromolecules and not just small molecules.
@@ -87,7 +87,7 @@ pytest
 ```
 
 will run the built in tests.
-### Requirements:
+### Requirements
 OpenFEPOPS requires the following packages:
 - rdkit (>=2021.9.5.1)
 - numpy (>=1.22.4)
@@ -103,7 +103,7 @@ OpenFEPOPS requires the following packages:
 ## Usage
 OpenFEPOPS has been uploaded to the Python Packaging Index under the name 'fepops' and as such is installable using the pip package manager and the command 'pip install fepops'. With the package installed, entrypoints are used to expose commonly used OpenFEPOPS tasks such as descriptor generation and calculation on molecular similarity, enabling simple command line access without the need to explicitly invoke a Python interpreter. Whilst OpenFEPOPS may be used solely via the command line interface, a robust API is available and may be used within other programs or integrated into existing pipelines to enable more complex workflows.  API documentation is available at https://justinykc.github.io/FEPOPS.
 
-### Command line usage:
+### Command line usage
 With OpenFEPOPS installed to a Python environment, entrypoints in the code and a command line interface control object allow omission of the python interpreter program when calling common OpenFEPOPS tasks. This allows command line usage of the form:
 
 ```console
