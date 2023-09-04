@@ -2,6 +2,7 @@ from rdkit import Chem
 from rdkit.Chem import rdMolDescriptors
 from rdkit.Chem.MolStandardize import rdMolStandardize
 import pandas as pd
+from typing import Optional
 
 
 class Filter:
@@ -17,7 +18,7 @@ class Filter:
         self.max_rings = max_rings
         self.max_n_rot = max_n_rot
 
-    def __call__(self, mol: Chem.rdchem.Mol) -> Chem.rdchem.Mol or None:
+    def __call__(self, mol: Chem.rdchem.Mol) -> Optional[Chem.rdchem.Mol]:
         """Apply all filters
 
         Parameters
@@ -27,13 +28,13 @@ class Filter:
 
         Returns
         -------
-        filter_result
+        filter_result : Optional[Chem.rdchem.Mol]
           Return a Rdkit mol object if the input molecule meets all criteria, otherwise return None.
         """
         filter_result = self.filter_mol(mol)
         return filter_result
 
-    def filter_mol(self, mol: Chem.rdchem.Mol) -> Chem.rdchem.Mol or None:
+    def filter_mol(self, mol: Chem.rdchem.Mol) -> Optional[Chem.rdchem.Mol]:
         """Apply all filters
 
         Perform four filters (minimum number of atoms, maximum number of rings, maximum number of rotatable bonds,
@@ -46,7 +47,7 @@ class Filter:
 
         Returns
         -------
-        Chem.rdchem.Mol or None
+        Optional[Chem.rdchem.Mol]
           Return a Rdkit mol object if the input molecule meets all criteria, otherwise return None.
         """
         mol = self.atom_num(mol, self.min_atoms)
@@ -136,7 +137,7 @@ class Filter:
 
     def rotation_bond_num(
         self, mol: Chem.rdchem.Mol, cutoff: int = 40
-    ) -> Chem.rdchem.Mol or None:
+    ) -> Optional[Chem.rdchem.Mol]:
         """Fliter molecules by number of rotatable bonds
 
         Fliter out molecules by the number of rotatable bonds.
@@ -150,7 +151,7 @@ class Filter:
 
         Returns
         -------
-        Chem.rdchem.Mol or None
+        Optional[Chem.rdchem.Mol]
           Return a Rdkit mol object if the input molecule meets the criterion, otherwise return None.
         """
         rotation_bond_num = rdMolDescriptors.CalcNumRotatableBonds(mol)
@@ -159,7 +160,7 @@ class Filter:
         else:
             return None
 
-    def remove_salt(self, mol: Chem.rdchem.Mol) -> Chem.rdchem.Mol or None:
+    def remove_salt(self, mol: Chem.rdchem.Mol) -> Optional[Chem.rdchem.Mol]:
         """Romve salts or ions from molecules
 
         Remove salts or ions from molecules
@@ -171,7 +172,7 @@ class Filter:
 
         Returns
         -------
-        Chem.rdchem.Mol or None
+        cleaned_molecule : Optional[Chem.rdchem.Mol]
           Return a Rdkit mol object if the input molecule meets the criterion, otherwise return None.
         """
         lfc = rdMolStandardize.LargestFragmentChooser()
