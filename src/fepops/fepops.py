@@ -14,6 +14,7 @@ from typing import Union, Optional, Tuple, Literal
 from enum import Enum
 import multiprocessing as mp
 from multiprocessing import SimpleQueue
+import logging
 
 GetFepopStatusCode = Enum(
     "GetFepopStatusCode",
@@ -557,7 +558,6 @@ class OpenFEPOPS:
             try:
                 mol = Chem.MolFromSmiles(smiles_string, sanitize=False)
             except:
-                f"Could not parse smiles to a valid molecule, smiles was: {smiles_string}"
                 return None
         return mol
 
@@ -678,7 +678,7 @@ class OpenFEPOPS:
             params = AllChem.ETKDGv2()
             id = AllChem.EmbedMolecule(mol, params)
             if id == -1:
-                print(
+                logging.warning(
                     "Coords could not be generated without using random coords. using random coords now"
                 )
                 params.useRandomCoords = True
@@ -687,7 +687,7 @@ class OpenFEPOPS:
                     AllChem.EmbedMolecule(mol, params)
                 )
             except ValueError:
-                print("Conformer embedding failed")
+                logging.warning("Conformer embedding failed")
                 return []
         dihedrals = self._get_dihedrals(mol)
         starting_angles = [
@@ -844,12 +844,12 @@ class OpenFEPOPS:
             original_smiles = mol
             mol = self._mol_from_smiles(mol)
         if mol is None:
-            print(
+            logging.ERROR(
                 f"Failed to make a molecule{' from '+original_smiles if original_smiles is not None else ''}"
             )
             return GetFepopStatusCode.FAILED_TO_GENERATE, None
         if Lipinski.HeavyAtomCount(mol) < self.num_centroids_per_fepop:
-            print(
+            logging.ERROR(
                 f"Number of heavy atoms ({Lipinski.HeavyAtomCount(mol)}) below requested feature points ({self.num_centroids_per_fepop}) for molecule {original_smiles if original_smiles is not None else ''}"
             )
             return GetFepopStatusCode.FAILED_TO_GENERATE, None
@@ -861,7 +861,7 @@ class OpenFEPOPS:
             conf_list = self.generate_conformers(t_mol)
             each_mol_with_all_confs_list.extend(conf_list)
         if each_mol_with_all_confs_list == []:
-            print(
+            logging.ERROR(
                 f"Failed to generate conformers/tautomers {' for '+original_smiles if original_smiles is not None else ''}"
             )
             return GetFepopStatusCode.FAILED_TO_GENERATE, None
@@ -875,8 +875,8 @@ class OpenFEPOPS:
             )
         except ValueError as e:
             if original_smiles is not None:
-                print(f"Failed molecule had SMILES: {original_smiles}")
-            print(e)
+                logging.ERROR(f"Failed molecule had SMILES: {original_smiles}")
+            logging.ERROR(e)
             return GetFepopStatusCode.FAILED_TO_GENERATE, None
 
         medoids = self._get_k_medoids(

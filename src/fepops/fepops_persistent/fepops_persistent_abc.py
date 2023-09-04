@@ -9,6 +9,7 @@ from tqdm import tqdm
 from fepops.fepops import GetFepopStatusCode
 from ..fepops import OpenFEPOPS
 import multiprocessing as mp
+import logging
 
 
 class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
@@ -289,7 +290,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
             except:
                 mol = None
         if mol is None:
-            print(f"Could not parse smiles to a valid molecule, smiles was: {s}")
+            logging.WARNING(f"Could not parse smiles to a valid molecule, smiles was: {s}")
             return (s, mol)
         if smiles_guaranteed_rdkit_canonical:
             return (s, mol)
