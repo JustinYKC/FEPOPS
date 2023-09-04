@@ -5,6 +5,7 @@ from fepops import OpenFEPOPS
 import pandas as pd
 import multiprocessing as mp
 from rdkit import Chem
+import logging
 
 
 class DudePreprocessor:
@@ -68,7 +69,7 @@ class DudePreprocessor:
     ):
         target_output_file = self.dude_processed_path / f"dude_target_{dude_target}.csv"
         if skip_existing and target_output_file.exists():
-            print(
+            logging.WARNING(
                 f"Found existing {target_output_file}, skipping due to skip_existing = True, rerun as False to regenerate"
             )
         actives = pd.read_csv(
@@ -120,7 +121,7 @@ class DudePreprocessor:
         ):
             df = pd.read_csv(csv_path)
             if df[rdkit_canonical_smiles_column_header].isnull().values.any():
-                print(
+                logging.WARNING(
                     f"Whilst working on caching {csv_path}, the following mol rows did not contain RDKit canonical SMILES:"
                 )
                 print(df[df[rdkit_canonical_smiles_column_header].isnull()])
