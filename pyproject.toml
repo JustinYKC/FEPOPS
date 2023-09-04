@@ -23,7 +23,6 @@ dependencies = [
 [build-system]
 requires=[
     "setuptools>=61.0.0",
-    "pytest",
     ]
 build-backend="setuptools.build_meta"
 
