@@ -290,7 +290,7 @@ class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):
             except:
                 mol = None
         if mol is None:
-            logging.WARNING(f"Could not parse smiles to a valid molecule, smiles was: {s}")
+            logging.warning(f"Could not parse smiles to a valid molecule, smiles was: {s}")
             return (s, mol)
         if smiles_guaranteed_rdkit_canonical:
             return (s, mol)
