@@ -844,12 +844,12 @@ class OpenFEPOPS:
             original_smiles = mol
             mol = self._mol_from_smiles(mol)
         if mol is None:
-            logging.ERROR(
+            logging.error(
                 f"Failed to make a molecule{' from '+original_smiles if original_smiles is not None else ''}"
             )
             return GetFepopStatusCode.FAILED_TO_GENERATE, None
         if Lipinski.HeavyAtomCount(mol) < self.num_centroids_per_fepop:
-            logging.ERROR(
+            logging.error(
                 f"Number of heavy atoms ({Lipinski.HeavyAtomCount(mol)}) below requested feature points ({self.num_centroids_per_fepop}) for molecule {original_smiles if original_smiles is not None else ''}"
             )
             return GetFepopStatusCode.FAILED_TO_GENERATE, None
@@ -861,7 +861,7 @@ class OpenFEPOPS:
             conf_list = self.generate_conformers(t_mol)
             each_mol_with_all_confs_list.extend(conf_list)
         if each_mol_with_all_confs_list == []:
-            logging.ERROR(
+            logging.error(
                 f"Failed to generate conformers/tautomers {' for '+original_smiles if original_smiles is not None else ''}"
             )
             return GetFepopStatusCode.FAILED_TO_GENERATE, None
@@ -875,8 +875,8 @@ class OpenFEPOPS:
             )
         except ValueError as e:
             if original_smiles is not None:
-                logging.ERROR(f"Failed molecule had SMILES: {original_smiles}")
-            logging.ERROR(e)
+                logging.error(f"Failed molecule had SMILES: {original_smiles}")
+            logging.error(e)
             return GetFepopStatusCode.FAILED_TO_GENERATE, None
 
         medoids = self._get_k_medoids(
