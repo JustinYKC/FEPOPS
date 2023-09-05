@@ -1,5 +1,6 @@
 import numpy as np
 import fire
+import json
 from pathlib import Path
 from typing import Union
 from .fepops import OpenFEPOPS, GetFepopStatusCode
@@ -18,7 +19,7 @@ class FepopsCMDLineInterface:
 
     """
 
-    def __init__(self, database_file: str = None):
+    def __init__(self, database_file: str = None, json_file: str = None):
         """Constructor for the command line inteface object
 
         Allows singular definisition of a database file and subsequent use in
@@ -30,8 +31,14 @@ class FepopsCMDLineInterface:
             If a string, then this is used as the database/cache file used by
             all subprocesses. If None, then no database of cache file is used,
             by default None.
+        json_file : str, optional
+            If a string, then this is used as the json file used as the format
+            for the output resulting from fepops generation or the similarity 
+            calculation. If None, then the results shown directly. By default
+            None.
         """
         self.database_file = database_file
+        self.json_file = json_file
 
     def get_fepops(self, smi: str):
         """Get Fepops descriptors from a SMILES string
@@ -56,6 +63,15 @@ class FepopsCMDLineInterface:
                 return f.get_fepops(smi)
         else:
             f = OpenFEPOPS()
+            if self.json_file is not None:
+                fepops_status1, fepops_features= f.get_fepops(smi)
+                with open(Path(self.json_file), 'w') as json_output:
+                    return json.dump(
+                        {
+                        "FepopStatusCode": str(fepops_status1.name),
+                        "Fepops": fepops_features.tolist()
+                        }, json_output, indent=4
+                    )
             return f.get_fepops(smi)
 
     def calc_sim(self, smi1: str, smi2: str):
@@ -87,6 +103,13 @@ class FepopsCMDLineInterface:
         else:
             f = OpenFEPOPS()
             print(f.calc_similarity(smi1, smi2))
+            if self.json_file is not None:
+                with open(Path(self.json_file), 'w') as json_output:
+                    return json.dump(
+                        {
+                        "Similarity": str(f.calc_similarity(smi1, smi2))
+                        }, json_output, indent=4
+                    )
 
     def save_descriptors(self, smi: str):
         """Pregenerate FEPOPS descriptors for a set of SMILES strings

@@ -105,7 +105,7 @@ class DudePreprocessor:
     ):
         target_output_file = self.dude_processed_path / f"dude_target_{dude_target}.csv"
         if skip_existing and target_output_file.exists():
-            logging.WARNING(
+            logging.warning(
                 f"Found existing {target_output_file}, skipping due to skip_existing = True, rerun as False to regenerate"
             )
         actives = pd.read_csv(
@@ -157,7 +157,7 @@ class DudePreprocessor:
         ):
             df = pd.read_csv(csv_path)
             if df[rdkit_canonical_smiles_column_header].isnull().values.any():
-                logging.WARNING(
+                logging.warning(
                     f"Whilst working on caching {csv_path}, the following mol rows did not contain RDKit canonical SMILES:"
                 )
                 print(df[df[rdkit_canonical_smiles_column_header].isnull()])
