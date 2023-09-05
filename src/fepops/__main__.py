@@ -2,7 +2,7 @@ import numpy as np
 import fire
 import json
 from pathlib import Path
-from typing import Union
+from typing import Optional
 from .fepops import OpenFEPOPS, GetFepopStatusCode
 from .fepops_persistent import get_persistent_fepops_storage_object
 
@@ -19,11 +19,11 @@ class FepopsCMDLineInterface:
 
     """
 
-    def __init__(self, database_file: str = None, json_file: str = None):
+    def __init__(self, database_file: str = None, json_file: Optional[str] = None):
         """Constructor for the command line inteface object
 
-        Allows singular definisition of a database file and subsequent use in
-        all subcommands.
+        Allows singular definition of a database file and subsequent use in
+        all subcommands and setting of JSON output file if required.
 
         Parameters
         ----------
@@ -32,13 +32,14 @@ class FepopsCMDLineInterface:
             all subprocesses. If None, then no database of cache file is used,
             by default None.
         json_file : str, optional
-            If a string, then this is used as the json file used as the format
-            for the output resulting from fepops generation or the similarity 
-            calculation. If None, then the results shown directly. By default
-            None.
+            If a string, then this is used as the JSON output file for results
+            from fepops generation and similarity calculations. If None, then
+            results are printed to the terminal, By default None
         """
         self.database_file = database_file
-        self.json_file = json_file
+        self.json_file = None if json_file is None else Path(json_file)
+        if self.json_file is not None and not self.json_file.parent.resolve().exists():
+            self.json_file.parent.resolve().mkdir(parents=True)
 
     def get_fepops(self, smi: str):
         """Get Fepops descriptors from a SMILES string
@@ -58,21 +59,25 @@ class FepopsCMDLineInterface:
             element is either None (if unsuccessful), or a np.ndarray containing
             the calculated Fepops descriptors of the requested input molecule.
         """
+        
         if self.database_file is not None:
             with get_persistent_fepops_storage_object(self.database_file) as f:
-                return f.get_fepops(smi)
+                fepops_result = f.get_fepops(smi)
         else:
             f = OpenFEPOPS()
-            if self.json_file is not None:
-                fepops_status1, fepops_features= f.get_fepops(smi)
-                with open(Path(self.json_file), 'w') as json_output:
-                    return json.dump(
-                        {
-                        "FepopStatusCode": str(fepops_status1.name),
-                        "Fepops": fepops_features.tolist()
-                        }, json_output, indent=4
-                    )
-            return f.get_fepops(smi)
+            fepops_result = f.get_fepops(smi)
+        if self.json_file is None:
+            return fepops_result
+        else:
+            fepops_status, fepops_features = fepops_result
+            with open(Path(self.json_file), 'w') as json_output:
+                json.dump(
+                    {
+                    "SMILES": smi,
+                    "FepopStatusCode": str(fepops_status.name),
+                    "Fepops": fepops_features.tolist()
+                    }, json_output, indent=4
+                )
 
     def calc_sim(self, smi1: str, smi2: str):
         """Calculate FEPOPS similarity between two smiles strings
@@ -97,19 +102,24 @@ class FepopsCMDLineInterface:
                     fepops_status1 is not GetFepopStatusCode.SUCCESS
                     or fepops_status2 is not GetFepopStatusCode.SUCCESS
                 ):
-                    return np.nan
+                    similarity_score = np.nan
                 else:
-                    return f.calc_similarity(fepops_features1, fepops_features2)
+                    similarity_score = f.calc_similarity(fepops_features1, fepops_features2)
         else:
             f = OpenFEPOPS()
-            print(f.calc_similarity(smi1, smi2))
-            if self.json_file is not None:
-                with open(Path(self.json_file), 'w') as json_output:
-                    return json.dump(
-                        {
-                        "Similarity": str(f.calc_similarity(smi1, smi2))
-                        }, json_output, indent=4
-                    )
+            similarity_score = f.calc_similarity(smi1, smi2)
+            
+        if self.json_file is not None:
+            with open(Path(self.json_file), 'w') as json_output:
+                json.dump(
+                    {
+                    "SMI1": smi1,
+                    "SMI2": smi2,
+                    "FEPOPS Similarity Score": similarity_score if len(similarity_score)>1 else similarity_score[0]
+                    }, json_output, indent=4
+                )
+        else:
+            return similarity_score if len(similarity_score)>1 else similarity_score[0]
 
     def save_descriptors(self, smi: str):
         """Pregenerate FEPOPS descriptors for a set of SMILES strings
@@ -133,7 +143,7 @@ class FepopsCMDLineInterface:
         decoys, bringing the total number of molecules to 1,434,022.
         More information is available here: https://dude.docking.org/
         """
-        from .dude_preprocessor import DudePreprocessor
+        from .utils import DudePreprocessor
 
         dude_preprop = DudePreprocessor(dude_directory=dude_directory)
         return dude_preprop
