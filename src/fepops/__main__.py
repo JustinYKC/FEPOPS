@@ -59,7 +59,7 @@ class FepopsCMDLineInterface:
             element is either None (if unsuccessful), or a np.ndarray containing
             the calculated Fepops descriptors of the requested input molecule.
         """
-        
+
         if self.database_file is not None:
             with get_persistent_fepops_storage_object(self.database_file) as f:
                 fepops_result = f.get_fepops(smi)
@@ -73,10 +73,12 @@ class FepopsCMDLineInterface:
             with open(Path(self.json_file), 'w') as json_output:
                 json.dump(
                     {
-                    "SMILES": smi,
-                    "FepopStatusCode": str(fepops_status.name),
-                    "Fepops": fepops_features.tolist()
-                    }, json_output, indent=4
+                        "SMILES": smi,
+                        "FepopStatusCode": str(fepops_status.name),
+                        "Fepops": fepops_features.tolist(),
+                    },
+                    json_output,
+                    indent=4,
                 )
 
     def calc_sim(self, smi1: str, smi2: str):
@@ -104,22 +106,30 @@ class FepopsCMDLineInterface:
                 ):
                     similarity_score = np.nan
                 else:
-                    similarity_score = f.calc_similarity(fepops_features1, fepops_features2)
+                    similarity_score = f.calc_similarity(
+                        fepops_features1, fepops_features2
+                    )
         else:
             f = OpenFEPOPS()
             similarity_score = f.calc_similarity(smi1, smi2)
-            
+
         if self.json_file is not None:
             with open(Path(self.json_file), 'w') as json_output:
                 json.dump(
                     {
-                    "SMI1": smi1,
-                    "SMI2": smi2,
-                    "FEPOPS Similarity Score": similarity_score if len(similarity_score)>1 else similarity_score[0]
-                    }, json_output, indent=4
+                        "SMI1": smi1,
+                        "SMI2": smi2,
+                        "FEPOPS Similarity Score": similarity_score
+                        if len(similarity_score) > 1
+                        else similarity_score[0],
+                    },
+                    json_output,
+                    indent=4,
                 )
         else:
-            return similarity_score if len(similarity_score)>1 else similarity_score[0]
+            return (
+                similarity_score if len(similarity_score) > 1 else similarity_score[0]
+            )
 
     def save_descriptors(self, smi: str):
         """Pregenerate FEPOPS descriptors for a set of SMILES strings
