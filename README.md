@@ -124,6 +124,14 @@ fepops --database_file=<DB_file_path> <subcommand> <arguments>
 ```
 Depending on the supplied file extension of <DB_file_path>, either a SQLite file (".sqlite", ".sqlite3", ".db", ".db3", ".s3db", or ".sl3" file extensions) is created or loaded for the appending of data, or a JSON file is used (when the extension is ".json").
 
+Additionally, a file to which JSON formatted ouput should be written to can be supplied with the --json_file flag when using the calc_sim and get_fepops commands as follows:
+
+```console
+fepops --database_file=<DB_file_path> --json_file=<JSON_file_path> get_fepops <arguments>
+fepops --database_file=<DB_file_path> --json_file=<JSON_file_path> calc_sim <arguments>
+```
+where <JSON_file_path> is the path to where JSON formatted output should be written.
+
 Running OpenFEPOPS with the -h switch prints help to the terminal and it may also be used after sub-command switches to inspect required arguments.
 
 #### Example: Calculating molecular similarity between two molecules (ibuprofen and diclofenac)
@@ -132,9 +140,67 @@ fepops calc_sim "CC(Cc1ccc(cc1)C(C(=O)O)C)C" "OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl"
 ```
 Note the use of quotes around the smiles strings. This is required as BASH and other shells will try to parse the brackets often present in smiles to denote branching.
 
+Output may be directed to a JSON file as follows:
+
+
+```console
+fepops --json_file="example_fepops_score.json" calc_sim "CC(Cc1ccc(cc1)C(C(=O)O)C)C" "OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl"
+```
+
+The file 'example_fepops_score.json' then contains output of the form:
+
+```javascript
+{
+    "SMI1": "CC(Cc1ccc(cc1)C(C(=O)O)C)C",
+    "SMI2": "OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl",
+    "FEPOPS Similarity Score": 0.14135371590471596
+}
+```
+
 #### Example: Get the FEPOPS descriptors for diclofenac
 ```console
 fepops get_fepops "OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl"
+```
+Again, output may be directed to a JSON file as follows:
+
+
+```console
+fepops --json_file="example_diclofenac_fepops_descriptors.json" get_fepops "OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl"
+```
+
+The file 'example_fepops_score.json' then contains output of the form below. For brevity, output is truncated at the first of 7 FEPOPS, truncation marked by TRUNCATION:
+
+```javascript
+{
+    "SMILES": "OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl",
+    "FepopStatusCode": "SUCCESS",
+    "Fepops": [
+        [
+            -0.5684914743317748,
+            1.3061,
+            1.0,
+            1.0,
+            0.02878293161743492,
+            0.8432999999999999,
+            0.0,
+            1.0,
+            0.1949443985093149,
+            1.0734,
+            0.0,
+            1.0,
+            0.3447641442050251,
+            1.1413,
+            0.0,
+            1.0,
+            2.52506114069371,
+            4.753703619492762,
+            3.216333750680169,
+            4.563318239587458,
+            2.9657848574016255,
+            7.096648170644156
+        ],
+    TRUNCATION
+}
 ```
 
 #### Example: pregenerating descriptors for an in-house compound archive
