@@ -5,6 +5,7 @@ from fepops import OpenFEPOPS
 import pandas as pd
 import multiprocessing as mp
 from rdkit import Chem
+import logging
 
 
 class DudePreprocessor:
@@ -12,9 +13,21 @@ class DudePreprocessor:
         self,
         *,
         dude_directory: Union[Path, str] = "data/dude/",
-    ) -> None:
+    ):
+        """Perform preprocessing on the DUDE database.
+
+        Assumes that the DUDE database has been downloaded and placed in the path
+        "data/dude/unprocessed". Here, we expect directories for each target containing
+        actives_final.ism and decoys_final.ism. These files are then processed into CSVs
+        representing the molecules (actives and decoys) for each DUDE target.
+
+        Parameters
+        ----------
+        dude_directory : Union[Path, str], optional
+            Directory containg , by default "data/dude/"
+
+        """
         print(dude_directory)
-        print(type(dude_directory))
         self.dude_path = Path(dude_directory)
         self.dude_unprocessed_path = self.dude_path / Path("unprocessed")
         if not self.dude_path.exists():
@@ -25,14 +38,38 @@ class DudePreprocessor:
 
     def __call__(
         self,
-    ):
-        self.process()
-
-    def process(
-        self,
         targets: Optional[Union[str, list[str]]] = None,
         skip_existing: bool = True,
     ):
+        """Perform processing
+
+        Parameters
+        ----------
+        targets : Optional[Union[str, list[str]]], optional
+            Optionally provide a list of target names to process. If None, then
+            all targets are processed, by default None
+        skip_existing : bool, optional
+            If True, then existing processed target files are not regenerated, by
+            default True
+        """
+        self.process(targets=targets, skip_existing=skip_existing)
+
+    def process(
+        self,
+        targets: Optional[list[str]] = None,
+        skip_existing: bool = True,
+    ):
+        """Perform processing
+
+        Parameters
+        ----------
+        targets : Optional[Union[str, list[str]]], optional
+            Optionally provide a list of target names to process. If None, then
+            all targets are processed, by default None
+        skip_existing : bool, optional
+            If True, then existing processed target files are not regenerated, by
+            default True
+        """
         if targets is None:
             dude_targets = [
                 t.parent.name
@@ -43,7 +80,7 @@ class DudePreprocessor:
                 targets = [targets]
         print(f"Processing the following DUDE targets: {dude_targets}")
         for target in tqdm(dude_targets, desc=f"Preparing targets"):
-            self.create_dude_target_csv_data(target, skip_existing=skip_existing)
+            self._create_dude_target_csv_data(target, skip_existing=skip_existing)
 
     @staticmethod
     def _parallel_init_worker_desc_gen_shared_fepops_ob():
@@ -58,7 +95,7 @@ class DudePreprocessor:
             return ""
         return Chem.MolToSmiles(mol)
 
-    def create_dude_target_csv_data(
+    def _create_dude_target_csv_data(
         self,
         dude_target: Path,
         actives_file: Path = Path("actives_final.ism"),
@@ -68,7 +105,7 @@ class DudePreprocessor:
     ):
         target_output_file = self.dude_processed_path / f"dude_target_{dude_target}.csv"
         if skip_existing and target_output_file.exists():
-            print(
+            logging.warning(
                 f"Found existing {target_output_file}, skipping due to skip_existing = True, rerun as False to regenerate"
             )
         actives = pd.read_csv(
@@ -108,10 +145,10 @@ class DudePreprocessor:
             Path of CSV file. If None, then all CSV files in the DUDE datasets
             processed path are used.
         rdkit_canonical_smiles_column_header : str, optional
-            _description_, by default "rdkit_canonical_smiles"
+            Column header containing RDKit canonical SMILES, by default
+            "rdkit_canonical_smiles"
         """
-
-        from .fepops_persistent import get_persistent_fepops_storage_object
+        from ...fepops.fepops_persistent import get_persistent_fepops_storage_object
 
         for csv_path in (
             [Path(csv_path)]
@@ -120,7 +157,7 @@ class DudePreprocessor:
         ):
             df = pd.read_csv(csv_path)
             if df[rdkit_canonical_smiles_column_header].isnull().values.any():
-                print(
+                logging.warning(
                     f"Whilst working on caching {csv_path}, the following mol rows did not contain RDKit canonical SMILES:"
                 )
                 print(df[df[rdkit_canonical_smiles_column_header].isnull()])

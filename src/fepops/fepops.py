@@ -14,6 +14,7 @@ from typing import Union, Optional, Tuple, Literal
 from enum import Enum
 import multiprocessing as mp
 from multiprocessing import SimpleQueue
+import logging
 
 GetFepopStatusCode = Enum(
     "GetFepopStatusCode",
@@ -102,52 +103,52 @@ class OpenFEPOPS:
         num_fepops_per_mol: int = 7,
         num_centroids_per_fepop: int = 4,
         descriptor_means: Tuple[float, ...] = (
-            -0.28932319,
-            0.5166312,
-            0.37458883,
-            0.99913668,
-            -0.04193182,
-            1.03616917,
-            0.27327129,
-            0.99839024,
-            0.09701198,
-            1.12969387,
-            0.23718642,
-            0.99865705,
-            0.35968991,
-            0.6649304,
-            0.4123743,
-            0.99893657,
-            5.70852885,
-            6.3707943,
-            6.47354071,
-            6.26385429,
-            6.19229367,
-            6.22946713,
+            -0.28971602,
+            0.5181022,
+            0.37487135,
+            0.99922747,
+            -0.04187301,
+            1.03382471,
+            0.27407036,
+            0.99853436,
+            0.09725517,
+            1.12824307,
+            0.23735556,
+            0.99882914,
+            0.35977538,
+            0.66653514,
+            0.41238282,
+            0.99902545,
+            5.71261449,
+            6.37716992,
+            6.47293777,
+            6.26134733,
+            6.20354385,
+            6.23201498,
         ),
         descriptor_stds: Tuple[float, ...] = (
-            0.35067291,
-            1.00802116,
-            0.48380817,
-            0.02926675,
-            0.15400475,
-            0.86220776,
-            0.44542581,
-            0.03999429,
-            0.16085455,
-            0.92042695,
-            0.42515847,
-            0.03655217,
-            0.35778578,
-            1.36108994,
-            0.49210665,
-            0.03252466,
-            1.96446927,
-            2.30792259,
-            2.5024708,
-            2.4155645,
-            2.29434487,
-            2.31437527,
+            0.35110473,
+            1.00839329,
+            0.4838859,
+            0.02769204,
+            0.15418035,
+            0.86446056,
+            0.44583626,
+            0.0381767,
+            0.16095862,
+            0.92079483,
+            0.42526185,
+            0.03413741,
+            0.35756229,
+            1.36093993,
+            0.4921059,
+            0.0311619,
+            1.9668792,
+            2.31266486,
+            2.50699385,
+            2.41269982,
+            2.30018205,
+            2.31527129,
         ),
     ):
         """OpenFEPOPS (Feature Points) molecular similarity object
@@ -202,7 +203,7 @@ class OpenFEPOPS:
             0.09701198,1.12969387,0.23718642,0.99865705,0.35968991,0.6649304,
             0.4123743,0.99893657,5.70852885,6.3707943,6.47354071,6.26385429,
             6.19229367,6.22946713)
-        descriptor_sds : Tuple[float, ...], optional
+        descriptor_stds : Tuple[float, ...], optional
             Due to the need to apply scaling to FEPOPS, the DUDE diversity set has
             been profiled and the means collected for all contained FEPOPS. This
             this allows centering and scaling of FEPOPS before scoring. This field
@@ -219,9 +220,12 @@ class OpenFEPOPS:
         ValueError
             Invalid kmeans method
         """
-
-        self.descriptor_means = descriptor_means
-        self.descriptor_stds = descriptor_stds
+        # Descriptor stds may contain zeros. If they do, then we mimic Scikit-Learn's
+        # StandardScaler, whereby if unit variance is not achievable, no scaling is
+        # applied (value of 1.0)
+        self.descriptor_stds_no_zeros = np.array(descriptor_stds)
+        self.descriptor_stds_no_zeros[self.descriptor_stds_no_zeros == 0.0] = 1.0
+        self.descriptor_means = np.array(descriptor_means)
 
         try:
             self.kmeans_func = getattr(self, f"_perform_kmeans_{kmeans_method}")
@@ -282,31 +286,33 @@ class OpenFEPOPS:
         if input_x.shape[0] <= k:
             return input_x
 
-        point_to_centroid_map = np.ones(input_x.shape[0])
+        # Apply standard scaling to FEPOP features. Behaviour when std dev is 0 mimics
+        # Scikit-Learn's StandardScaler, whereby if unit variance is not achievable, no
+        # scaling is applied (value of 1.0)
+        input_x_std = np.std(input_x, axis=0)
+        input_x_std[input_x_std == 0.0] = 1.0
+        X = (input_x - np.mean(input_x, axis=0)) / input_x_std
+        point_to_centroid_map = np.ones(X.shape[0])
         point_to_centroid_map_prev = np.zeros_like(point_to_centroid_map)
 
         np_rng = np.random.default_rng(seed=random_state)
-        medoids = input_x[
-            np_rng.choice(np.arange(input_x.shape[0]), size=k, replace=False), :
-        ]
+        medoids = X[np_rng.choice(np.arange(X.shape[0]), size=k, replace=False), :]
 
         while (point_to_centroid_map != point_to_centroid_map_prev).any():
             point_to_centroid_map_prev = point_to_centroid_map
-            point_to_centroid_map = np.argmin(
-                np.square(cdist(input_x, medoids)), axis=1
-            )
+            point_to_centroid_map = np.argmin(np.square(cdist(X, medoids)), axis=1)
             for i in range(k):
-                medoid_members = input_x[point_to_centroid_map == i]
+                medoid_members = X[point_to_centroid_map == i]
                 if len(medoid_members) == 0:
-                    chosen_x_point = np_rng.choice(np.arange(input_x.shape[0]))
-                    medoids[i] = input_x[chosen_x_point, :]
+                    chosen_x_point = np_rng.choice(np.arange(X.shape[0]))
+                    medoids[i] = X[chosen_x_point, :]
                     point_to_centroid_map[chosen_x_point] = i
-                medoids[i] = np.median(input_x[point_to_centroid_map == i], axis=0)
+                medoids[i] = np.median(X[point_to_centroid_map == i], axis=0)
         # Sorting at this stage for reproducibility with existing pregenerated
         # descriptor sets and convention with early FEPOPS versions which relied
         # upon FEPOPS within a molecule being sorted by charge (before moving to
         # the newer CombiAlign scoring algorithm)
-        return medoids[np.lexsort(medoids.T[::-1])]
+        return input_x[np.lexsort(medoids.T[::-1])]
 
     def _calculate_atomic_logPs(self, mol: Chem.rdchem.Mol) -> dict:
         """Calculate logP contribution for each of atom in a molecule
@@ -552,7 +558,6 @@ class OpenFEPOPS:
             try:
                 mol = Chem.MolFromSmiles(smiles_string, sanitize=False)
             except:
-                f"Could not parse smiles to a valid molecule, smiles was: {smiles_string}"
                 return None
         return mol
 
@@ -673,7 +678,7 @@ class OpenFEPOPS:
             params = AllChem.ETKDGv2()
             id = AllChem.EmbedMolecule(mol, params)
             if id == -1:
-                print(
+                logging.warning(
                     "Coords could not be generated without using random coords. using random coords now"
                 )
                 params.useRandomCoords = True
@@ -682,7 +687,7 @@ class OpenFEPOPS:
                     AllChem.EmbedMolecule(mol, params)
                 )
             except ValueError:
-                print("Conformer embedding failed")
+                logging.warning("Conformer embedding failed")
                 return []
         dihedrals = self._get_dihedrals(mol)
         starting_angles = [
@@ -839,12 +844,12 @@ class OpenFEPOPS:
             original_smiles = mol
             mol = self._mol_from_smiles(mol)
         if mol is None:
-            print(
+            logging.error(
                 f"Failed to make a molecule{' from '+original_smiles if original_smiles is not None else ''}"
             )
             return GetFepopStatusCode.FAILED_TO_GENERATE, None
         if Lipinski.HeavyAtomCount(mol) < self.num_centroids_per_fepop:
-            print(
+            logging.error(
                 f"Number of heavy atoms ({Lipinski.HeavyAtomCount(mol)}) below requested feature points ({self.num_centroids_per_fepop}) for molecule {original_smiles if original_smiles is not None else ''}"
             )
             return GetFepopStatusCode.FAILED_TO_GENERATE, None
@@ -856,7 +861,7 @@ class OpenFEPOPS:
             conf_list = self.generate_conformers(t_mol)
             each_mol_with_all_confs_list.extend(conf_list)
         if each_mol_with_all_confs_list == []:
-            print(
+            logging.error(
                 f"Failed to generate conformers/tautomers {' for '+original_smiles if original_smiles is not None else ''}"
             )
             return GetFepopStatusCode.FAILED_TO_GENERATE, None
@@ -870,8 +875,8 @@ class OpenFEPOPS:
             )
         except ValueError as e:
             if original_smiles is not None:
-                print(f"Failed molecule had SMILES: {original_smiles}")
-            print(e)
+                logging.error(f"Failed molecule had SMILES: {original_smiles}")
+            logging.error(e)
             return GetFepopStatusCode.FAILED_TO_GENERATE, None
 
         medoids = self._get_k_medoids(
@@ -894,10 +899,10 @@ class OpenFEPOPS:
         np.ndarray
             2D matrix containing A vs B feature correlations
         """
-        if len(A)<len(B):
-            A=np.pad(A, (0,len(B)-len(A)), mode='constant', constant_values=0)
-        if len(B)<len(A):
-            B=np.pad(B, (0,len(A)-len(B)), mode='constant', constant_values=0)
+        if len(A) < len(B):
+            A = np.pad(A, (0, len(B) - len(A)), mode='constant', constant_values=0)
+        if len(B) < len(A):
+            B = np.pad(B, (0, len(A) - len(B)), mode='constant', constant_values=0)
         am = A - np.mean(A, axis=0, keepdims=True)
         bm = B - np.mean(B, axis=0, keepdims=True)
         return (
@@ -961,12 +966,9 @@ class OpenFEPOPS:
             raise ValueError(
                 "candidate was not, or could not be coerced into a np.ndarray"
             )
-        q = np.nan_to_num(
-            ((query - self.descriptor_means) / self.descriptor_stds), nan=1e-9
-        )
-        c = np.nan_to_num(
-            (candidate - self.descriptor_means) / self.descriptor_stds, nan=1e-9
-        )
+
+        q = (query - self.descriptor_means) / self.descriptor_stds_no_zeros
+        c = (candidate - self.descriptor_means) / self.descriptor_stds_no_zeros
         return self.pairwise_correlation(q.flatten(), c.flatten())
 
     def __call__(

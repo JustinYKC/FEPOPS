@@ -9,10 +9,7 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.9"
 keywords = ["molecular similarity", "ligand based virtual screening"]
-
-[build-system]
-requires=[
-    "setuptools>=61.0.0",
+dependencies = [
     "rdkit>=2021.9.5.1",
     "numpy>=1.22.4",
     "pandas>=1.5.0",
@@ -23,7 +20,14 @@ requires=[
     "fire>=0.5.0",
     "tqdm>=4.48.0",
     ]
+[build-system]
+requires=[
+    "setuptools>=61.0.0",
+    ]
 build-backend="setuptools.build_meta"
+
+
+
 
 [tool.black]
 skip-string-normalization = true
@@ -41,11 +45,6 @@ exclude = '''
 )
 '''
 
-dependencies = [
-    "requests",
-    'importlib-metadata; python_version<"3.10"',
-]
-
 [project.scripts]
 fepops = "fepops.__main__:fepops_entrypoint"
 
@@ -54,3 +53,13 @@ where = ["src"]
 
 [project.urls]
 "Homepage" = "https://github.com/JustinYKC/FEPOPS"
+
+[project.optional-dependencies]
+dev = [
+    'black==23.3.0',
+    'pytest==7.4.0',
+    'build==0.10.0',
+]
+
+[tool.pytest.ini_options]
+"testpaths" = "tests/test*"
