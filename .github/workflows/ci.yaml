@@ -3,9 +3,9 @@ name: OpenFEPOPS CI
 
 on:
   push:
-    branches: [main, development]
+    branches: [master, development]
   pull_request:
-    branches: [main, development]
+    branches: [master, development]
 
 jobs:
   build:
