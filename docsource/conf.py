@@ -46,7 +46,7 @@ shutil.copyfile("../Figure1.png", Path("_static") / "Figure1.png")
 project = 'OpenFEPOPS'
 copyright = '2023, Yan-Kai Chen'
 author = 'Yan-Kai Chen'
-release = '1.8.0'
+release = '1.8.1'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

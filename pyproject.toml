@@ -1,6 +1,6 @@
 [project]
 name="fepops"
-version="1.8.0"
+version="1.8.1"
 description="OpenFEPOPS; A Python implementation of the FEPOPS molecular similarity method"
 authors = [
     {name = "Yan-Kai Chen"},
@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 keywords = ["molecular similarity", "ligand based virtual screening"]
 dependencies = [
-    "rdkit>=2021.9.5.1",
+    "rdkit>=2022.3.1",
     "numpy>=1.22.4",
     "pandas>=1.5.0",
     "scikit-learn>=1.3.0",
