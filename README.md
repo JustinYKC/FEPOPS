@@ -24,7 +24,7 @@ OpenFEPOPS has been benchmarked alongside some commonly used fingerprints agains
 |hivrt |0.651|0.670 |0.660 |0.582|
 |kif11 |0.763|0.668 |0.672  |0.713|
 
-*Macro averaged AUROC scores by target and molecular similarity technique for the DUDE diversity set. Across all datasets, 19 small molecules out of 112,796 were excluded from analysis mainly due to issues in parsing to valid structures using RDKit.  See 'Explore_DUDE_diversity_set.ipynb' for further information*
+*Average AUROC scores by target and molecular similarity technique for the DUDE diversity set. Across all datasets, 19 small molecules out of 112,796 were excluded from analysis mainly due to issues in parsing to valid structures using RDKit.  See 'Explore_DUDE_diversity_set.ipynb' for further information*
 
 ## Method description
 Whilst OpenFEPOPS has included functionality for descriptor caching and profiling of libraries, the core functionality of the package is descriptor generation and scoring.
