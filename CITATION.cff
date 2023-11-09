@@ -1,0 +1,50 @@
+cff-version: "1.2.0"
+authors:
+- family-names: Chen
+  given-names: Yan-Kai
+  orcid: "https://orcid.org/0000-0001-7161-9503"
+- family-names: Houston
+  given-names: Douglas R.
+  orcid: "https://orcid.org/0000-0002-3469-1546"
+- family-names: Auer
+  given-names: Manfred
+  orcid: "https://orcid.org/0000-0001-8920-3522"
+- family-names: Shave
+  given-names: Steven
+  orcid: "https://orcid.org/0000-0001-6996-3663"
+contact:
+- family-names: Shave
+  given-names: Steven
+  orcid: "https://orcid.org/0000-0001-6996-3663"
+doi: 10.6084/m9.figshare.24477184.v1
+message: If you use this software, please cite our article in the
+  Journal of Open Source Software.
+preferred-citation:
+  authors:
+  - family-names: Chen
+    given-names: Yan-Kai
+    orcid: "https://orcid.org/0000-0001-7161-9503"
+  - family-names: Houston
+    given-names: Douglas R.
+    orcid: "https://orcid.org/0000-0002-3469-1546"
+  - family-names: Auer
+    given-names: Manfred
+    orcid: "https://orcid.org/0000-0001-8920-3522"
+  - family-names: Shave
+    given-names: Steven
+    orcid: "https://orcid.org/0000-0001-6996-3663"
+  date-published: 2023-11-09
+  doi: 10.21105/joss.05763
+  issn: 2475-9066
+  issue: 91
+  journal: Journal of Open Source Software
+  publisher:
+    name: Open Journals
+  start: 5763
+  title: "OpenFEPOPS: A Python implementation of the FEPOPS molecular
+    similarity technique"
+  type: article
+  url: "https://joss.theoj.org/papers/10.21105/joss.05763"
+  volume: 8
+title: "OpenFEPOPS: A Python implementation of the FEPOPS molecular
+  similarity technique"
