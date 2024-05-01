@@ -853,9 +853,10 @@ class OpenFEPOPS:
                 f"Number of heavy atoms ({Lipinski.HeavyAtomCount(mol)}) below requested feature points ({self.num_centroids_per_fepop}) for molecule {original_smiles if original_smiles is not None else ''}"
             )
             return GetFepopStatusCode.FAILED_TO_GENERATE, None
-        mol = Chem.AddHs(mol)
+        mol = Chem.RemoveAllHs(mol)
 
         tautomers_list = self.tautomer_enumerator.enumerate(mol)
+        tautomers_list = [Chem.AddHs(m_) for m_ in tautomers_list]
         each_mol_with_all_confs_list = []
         for index, t_mol in enumerate(tautomers_list):
             conf_list = self.generate_conformers(t_mol)
