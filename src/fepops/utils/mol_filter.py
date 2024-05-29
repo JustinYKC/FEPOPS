@@ -1,7 +1,8 @@
+from typing import Optional
+
 from rdkit import Chem
 from rdkit.Chem import rdMolDescriptors
 from rdkit.Chem.MolStandardize import rdMolStandardize
-from typing import Optional
 
 
 class Filter:

@@ -1,20 +1,20 @@
-from rdkit import Chem
-from rdkit.Chem import AllChem
-from rdkit.Chem import MolStandardize
-from rdkit.Chem import Crippen, Lipinski
-from rdkit.Chem import rdMolTransforms
-from sklearn.cluster import KMeans as _SKLearnKMeans
-from fast_pytorch_kmeans import KMeans as _FastPTKMeans
-from scipy.spatial.distance import cdist, squareform, pdist
-from scipy.special import softmax
-import numpy as np
-import itertools, zlib
-import torch
-from typing import Union, Optional, Tuple, Literal
-from enum import Enum
-import multiprocessing as mp
-from multiprocessing import SimpleQueue
+import itertools
 import logging
+import multiprocessing as mp
+import zlib
+from enum import Enum
+from multiprocessing import SimpleQueue
+from typing import Literal, Tuple, Union
+
+import numpy as np
+import torch
+from fast_pytorch_kmeans import KMeans as _FastPTKMeans
+from rdkit import Chem
+from rdkit.Chem import AllChem, Crippen, Lipinski, rdMolTransforms
+from rdkit.Chem.MolStandardize import rdMolStandardize
+from scipy.spatial.distance import cdist, pdist, squareform
+from scipy.special import softmax
+from sklearn.cluster import KMeans as _SKLearnKMeans
 
 GetFepopStatusCode = Enum(
     "GetFepopStatusCode",
@@ -44,14 +44,14 @@ class OpenFEPOPS:
         you are stretching the capabilities in terms of feature points for large
         molecules.  Small molecules will not benefit at all from GPU
         acceleration due to overheads.  By default "sklearn"
-    max_tautomers : Optional[int], optional
+    max_tautomers : Union[int, None], optional
         Maximum number of tautomers which should be generated. Internally, this
         implementation of FEPOPS relies upon RDKit's TautomerEnumerator to
-        generate tautomers and may optionally pass in a limit to the number of
-        Tautomers to generate. Unless the molecules (or macromolecules) you are
-        working with generate massive numbers of tautomers, this should be None
-        implying that no limit should be placed on tautomer generation. By
-        default None
+        generate tautomers and pass 5 to the number of tautomers to generate 
+        based on original FEPOPS paper. Unless the molecules (or macromolecules) 
+        you areworking with generate massive numbers of tautomers, this may 
+        optionally set as None implying that no limit should be placed on 
+        tautomer generation. By default 5
     num_fepops_per_mol : int, optional
         Number of feature points to use in the representation of a molecule.
         Literature notes that 7 has been empirically found to be a good number
@@ -99,7 +99,7 @@ class OpenFEPOPS:
         self,
         *,
         kmeans_method: Literal['sklearn', 'pytorchcpu', 'pytorchgpu'] = 'sklearn',
-        max_tautomers: Optional[int] = None,
+        max_tautomers: Union[int, None] = 5,
         num_fepops_per_mol: int = 7,
         num_centroids_per_fepop: int = 4,
         descriptor_means: Tuple[float, ...] = (
@@ -251,10 +251,11 @@ class OpenFEPOPS:
         self.rotatable_bond_from_smarts = Chem.MolFromSmarts(
             "[!$(*#*)&!D1]-&!@[!$(*#*)&!D1]"
         )
-
-        self.tautomer_enumerator = MolStandardize.tautomer.TautomerEnumerator(
-            **{"max_tautomers": max_tautomers} if max_tautomers is not None else {}
-        )
+        self.tautomer_enumerator = rdMolStandardize.TautomerEnumerator()
+        if isinstance(max_tautomers, int):
+            self.tautomer_enumerator.SetMaxTautomers(max_tautomers)
+        if max_tautomers is None:
+            self.tautomer_enumerator.GetMaxTautomers()
 
     def _get_k_medoids(
         self, input_x: np.ndarray, k: int = 7, random_state: int = 42
@@ -855,7 +856,9 @@ class OpenFEPOPS:
             return GetFepopStatusCode.FAILED_TO_GENERATE, None
         mol = Chem.RemoveAllHs(mol)
 
-        tautomers_list = self.tautomer_enumerator.enumerate(mol)
+        tautomers_list = [
+            tautomer for tautomer in self.tautomer_enumerator.Enumerate(mol)
+        ]
         tautomers_list = [Chem.AddHs(m_) for m_ in tautomers_list]
         each_mol_with_all_confs_list = []
         for index, t_mol in enumerate(tautomers_list):

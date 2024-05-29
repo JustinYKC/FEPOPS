@@ -2,9 +2,12 @@ import bz2
 import sqlite3
 from pathlib import Path
 from typing import Union
-from rdkit import Chem
+
 import numpy as np
+from rdkit import Chem
+
 from fepops.fepops import GetFepopStatusCode
+
 from .fepops_persistent_abc import FepopsPersistentAbstractBaseClass
 
 
