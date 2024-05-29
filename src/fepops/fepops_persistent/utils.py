@@ -1,6 +1,7 @@
-from . import FepopsDBSqlite, FepopsDBJSON
-from typing import Union
 from pathlib import Path
+from typing import Union
+
+from . import FepopsDBJSON, FepopsDBSqlite
 
 
 def get_persistent_fepops_storage_object(

@@ -1,3 +1,5 @@
+import logging
+import multiprocessing as mp
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 from typing import Union
@@ -6,10 +8,10 @@ import numpy as np
 from rdkit import Chem
 from scipy.spatial.distance import cdist, pdist, squareform
 from tqdm import tqdm
+
 from fepops.fepops import GetFepopStatusCode
+
 from ..fepops import OpenFEPOPS
-import multiprocessing as mp
-import logging
 
 
 class FepopsPersistentAbstractBaseClass(metaclass=ABCMeta):

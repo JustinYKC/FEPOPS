@@ -1,11 +1,13 @@
-from typing import Union, Optional
-from pathlib import Path
-from tqdm import tqdm
-from fepops import OpenFEPOPS
-import pandas as pd
-import multiprocessing as mp
-from rdkit import Chem
 import logging
+import multiprocessing as mp
+from pathlib import Path
+from typing import Optional, Union
+
+import pandas as pd
+from rdkit import Chem
+from tqdm import tqdm
+
+from fepops import OpenFEPOPS
 
 
 class DudePreprocessor:
@@ -148,7 +150,8 @@ class DudePreprocessor:
             Column header containing RDKit canonical SMILES, by default
             "rdkit_canonical_smiles"
         """
-        from ...fepops.fepops_persistent import get_persistent_fepops_storage_object
+        from ...fepops.fepops_persistent import \
+            get_persistent_fepops_storage_object
 
         for csv_path in (
             [Path(csv_path)]

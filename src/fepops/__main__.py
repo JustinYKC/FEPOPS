@@ -1,9 +1,11 @@
-import numpy as np
-import fire
 import json
 from pathlib import Path
 from typing import Optional
-from .fepops import OpenFEPOPS, GetFepopStatusCode
+
+import fire
+import numpy as np
+
+from .fepops import GetFepopStatusCode, OpenFEPOPS
 from .fepops_persistent import get_persistent_fepops_storage_object
 
 
