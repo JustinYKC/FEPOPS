@@ -44,14 +44,14 @@ class OpenFEPOPS:
         you are stretching the capabilities in terms of feature points for large
         molecules.  Small molecules will not benefit at all from GPU
         acceleration due to overheads.  By default "sklearn"
-    max_tautomers : int, optional
+    max_tautomers : Union[int, None], optional
         Maximum number of tautomers which should be generated. Internally, this
         implementation of FEPOPS relies upon RDKit's TautomerEnumerator to
-        generate tautomers and may optionally pass in a limit to the number of
-        Tautomers to generate. Unless the molecules (or macromolecules) you are
-        working with generate massive numbers of tautomers, this should be None
-        implying that no limit should be placed on tautomer generation. By
-        default None
+        generate tautomers and pass 5 to the number of tautomers to generate 
+        based on original FEPOPS paper. Unless the molecules (or macromolecules) 
+        you areworking with generate massive numbers of tautomers, this may 
+        optionally set as None implying that no limit should be placed on 
+        tautomer generation. By default 5
     num_fepops_per_mol : int, optional
         Number of feature points to use in the representation of a molecule.
         Literature notes that 7 has been empirically found to be a good number
