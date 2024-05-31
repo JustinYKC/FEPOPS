@@ -1,6 +1,6 @@
 [project]
 name="fepops"
-version="1.8.2"
+version="1.8.3"
 description="OpenFEPOPS; A Python implementation of the FEPOPS molecular similarity method"
 authors = [
     {name = "Yan-Kai Chen"},
