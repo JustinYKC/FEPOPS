@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>fepops.fepops_persistent.fepops_persistent_abc &mdash; OpenFEPOPS 1.8.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            OpenFEPOPS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../readme.html">Readme</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../readme.html#statement-of-need">Statement of need</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../readme.html#benchmarking">Benchmarking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../readme.html#method-description">Method description</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../readme.html#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../readme.html#usage">Usage</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API documentation:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../fepops.html">fepops package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">OpenFEPOPS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">fepops.fepops_persistent.fepops_persistent_abc</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for fepops.fepops_persistent.fepops_persistent_abc</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">multiprocessing</span> <span class="k">as</span> <span class="nn">mp</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABCMeta</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">rdkit</span> <span class="kn">import</span> <span class="n">Chem</span>
+<span class="kn">from</span> <span class="nn">scipy.spatial.distance</span> <span class="kn">import</span> <span class="n">cdist</span><span class="p">,</span> <span class="n">pdist</span><span class="p">,</span> <span class="n">squareform</span>
+<span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
+
+<span class="kn">from</span> <span class="nn">fepops.fepops</span> <span class="kn">import</span> <span class="n">GetFepopStatusCode</span>
+
+<span class="kn">from</span> <span class="nn">..fepops</span> <span class="kn">import</span> <span class="n">OpenFEPOPS</span>
+
+
+<div class="viewcode-block" id="FepopsPersistentAbstractBaseClass"><a class="viewcode-back" href="../../../fepops.fepops_persistent.html#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass">[docs]</a><span class="k">class</span> <span class="nc">FepopsPersistentAbstractBaseClass</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">ABCMeta</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Abstract base class for persistent fepops storage</span>
+
+<span class="sd">    New storage methods may be implemented as demonstrated in fepopsdb_json.py</span>
+<span class="sd">    or in fepopsdb_sqlite.py by extending this abstract base class which</span>
+<span class="sd">    provides some required functionality like:</span>
+
+<span class="sd">    - save_descriptors(smiles: Union[str, Path, list[str]]) to save a smiles</span>
+<span class="sd">        file/list of smiles to the persistent storage</span>
+<span class="sd">    - get_cansmi_to_mol_dict_not_in_database(smiles: Union[str, Path, list[str]])</span>
+<span class="sd">        to retrieve a unique dictionary with canonical smiles as keys not already</span>
+<span class="sd">        stored in the database and rdkit mol objects as values.</span>
+
+<span class="sd">    When writing your own persistent storage methods, you must override the</span>
+<span class="sd">    following methods:</span>
+
+<span class="sd">    add_fepop(rdkit_canonical_smiles: str, fepops: np.ndarray)</span>
+<span class="sd">    ----------------------------------------------------------</span>
+<span class="sd">    Add the fepop to persistent storage. super().add_fepop may be called by the</span>
+<span class="sd">    overridden function to perform type checks on arguments.</span>
+
+<span class="sd">    fepop_exists(rdkit_canonical_smiles: str)</span>
+<span class="sd">    -----------------------------------------</span>
+<span class="sd">    Return True if the canonical smiles is already in the database, and False if</span>
+<span class="sd">    not. super().fepop_exists may be called by the overridden function to</span>
+<span class="sd">    perform type checks on arguments.</span>
+
+<span class="sd">    get_fepops(rdkit_canonical_smiles: str)</span>
+<span class="sd">    ---------------------------------------</span>
+<span class="sd">    Return a fepop from persistent storage. If it does not exist, then generate</span>
+<span class="sd">    it by calling self.fepops_object.get_fepops which is supplied by this base</span>
+<span class="sd">    class. super().get_fepops may be called by the overridden function to</span>
+<span class="sd">    perform type checks on arguments. With this function in place it allows</span>
+<span class="sd">    interface compatibility with a standard Fepops object.</span>
+
+<span class="sd">    Inheriting functions may also define __enter__ and __exit__ methods for use</span>
+<span class="sd">    with context handlers. If none are defined, then empty ones are provided.</span>
+<span class="sd">    This can be useful in doing things like writing out large files after</span>
+<span class="sd">    descriptor generation if incremental writes are not possible, like in the</span>
+<span class="sd">    case of the FepopsDBJSON child class.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    database_file : Union[str, Path]</span>
+<span class="sd">        File to use for persistent storage.</span>
+<span class="sd">    kmeans_method : str, optional</span>
+<span class="sd">        Method which should be used for kmeans calculation by</span>
+<span class="sd">        fepops objects, can be one of &quot;sklearn&quot;, &quot;pytorchgpu&quot;,</span>
+<span class="sd">        or &quot;pytorchcpu&quot;.</span>
+<span class="sd">    parallel : bool, optional</span>
+<span class="sd">        Run in parallel (using joblib), by default True</span>
+<span class="sd">    n_jobs : int, optional</span>
+<span class="sd">        Number of jobs to be spawned with joblib. If -1, then use</span>
+<span class="sd">        all available cores. By default -1</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_parallel_init_worker_get_cansmi_mol_tuple</span><span class="p">(</span><span class="n">smiles_is_rdkit_canonical</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Static method for initialisation of smiles and mol tuple workers</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        smiles_is_rdkit_canonical : bool</span>
+<span class="sd">            If True, then the supplied SMILES are guaranteed to be canonical and</span>
+<span class="sd">            generated by RDKit</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">global</span> <span class="n">sirdkc</span>
+        <span class="n">sirdkc</span> <span class="o">=</span> <span class="n">smiles_is_rdkit_canonical</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_parallel_get_cansmi_tuple</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Static method for worker threads to get smiles and mol tuples</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        m : str</span>
+<span class="sd">            Molecule as a smiles string</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple[str, rdkit.Chem.Mol]</span>
+<span class="sd">            Tuple containing an RDKit canonical SMILES string and the RDKit mol</span>
+<span class="sd">            constructed by it</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">global</span> <span class="n">sirdkc</span>
+        <span class="k">return</span> <span class="n">FepopsPersistentAbstractBaseClass</span><span class="o">.</span><span class="n">_get_can_smi_mol_tuple</span><span class="p">(</span>
+            <span class="n">m</span><span class="p">,</span> <span class="n">smiles_guaranteed_rdkit_canonical</span><span class="o">=</span><span class="n">sirdkc</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_parallel_init_worker_desc_gen_shared_fepops_ob</span><span class="p">(</span><span class="n">fepops_object</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Static method for FEPOPS descriptor worker processes initialisation</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fepops_object : OpenFEPOPS</span>
+<span class="sd">            Initialised OpenFEPOPS object which should be used to generate</span>
+<span class="sd">            descriptors</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">global</span> <span class="n">shared_fepops_ob</span>
+        <span class="n">shared_fepops_ob</span> <span class="o">=</span> <span class="n">fepops_object</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_parallel_get_gen_fepops_descriptors</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Static method for worker processes to generate FEPOPS descriptors</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        m : _type_</span>
+<span class="sd">            _description_</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        _type_</span>
+<span class="sd">            _description_</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">global</span> <span class="n">shared_fepops_ob</span>
+        <span class="k">return</span> <span class="n">m</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">shared_fepops_ob</span><span class="o">.</span><span class="n">get_fepops</span><span class="p">(</span><span class="n">m</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">database_file</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span>
+        <span class="n">kmeans_method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;sklearn&quot;</span><span class="p">,</span>
+        <span class="n">parallel</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">n_jobs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;FepopsPersistentABC constructor for storing initialisation parameters</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        database_file : Union[str, Path]</span>
+<span class="sd">            Location of the database file as a string or Path object</span>
+<span class="sd">        kmeans_method : str, optional</span>
+<span class="sd">            Method to use for calculation of FEPOPS, by default &quot;sklearn&quot;</span>
+<span class="sd">        parallel : bool, optional</span>
+<span class="sd">            If calculations should be done making use of multiple CPU cores, by</span>
+<span class="sd">            default True</span>
+<span class="sd">        n_jobs : int, optional</span>
+<span class="sd">            Number of worker processes to spawn. If -1, then the optimum is</span>
+<span class="sd">            detected automatically, by default -1</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">database_file</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">database_file</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">openfepops_object</span> <span class="o">=</span> <span class="n">OpenFEPOPS</span><span class="p">(</span><span class="n">kmeans_method</span><span class="o">=</span><span class="n">kmeans_method</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parallel</span> <span class="o">=</span> <span class="n">parallel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="n">n_jobs</span>
+
+<div class="viewcode-block" id="FepopsPersistentAbstractBaseClass.save_descriptors"><a class="viewcode-back" href="../../../fepops.fepops_persistent.html#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.save_descriptors">[docs]</a>    <span class="k">def</span> <span class="nf">save_descriptors</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">smiles</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+        <span class="n">add_failures_to_database</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">smiles_guaranteed_rdkit_canonical</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">fepops_object_constructor_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Pregenerate FEPOPS descriptors for a set of SMILES strings</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        smiles : Union[str, Path, list[str]]</span>
+<span class="sd">            String containing the path to a SMILES file which should be read in</span>
+<span class="sd">            and have each molecule with in added to the database</span>
+<span class="sd">        add_failures_to_database: bool</span>
+<span class="sd">            If True, then a record is kept in the database for SMILES which</span>
+<span class="sd">            were problematic and FEPOPS descriptor generation failed for, by</span>
+<span class="sd">            default True</span>
+<span class="sd">        smiles_guaranteed_rdkit_canonical : bool</span>
+<span class="sd">            If True, then the supplied SMILES are guaranteed to be canonical</span>
+<span class="sd">            SMILES generated by RDKit which allows skipping of a sanitisation</span>
+<span class="sd">            step, by default False</span>
+<span class="sd">        fepops_object_constructor_kwargs: dict</span>
+<span class="sd">            Dictionary of kwargs which will be passed to the FEPOPS object upon</span>
+<span class="sd">            initialisation, by default {}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">canonical_smiles_to_mol_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_cansmi_to_mol_dict_not_in_database</span><span class="p">(</span>
+            <span class="n">smiles</span><span class="p">,</span> <span class="n">smiles_guaranteed_rdkit_canonical</span><span class="o">=</span><span class="n">smiles_guaranteed_rdkit_canonical</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">canonical_smiles_to_mol_dict</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Nothing to add to database&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">parallel</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">rdkit_canonical_smiles</span><span class="p">,</span> <span class="n">mol</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span>
+                <span class="n">canonical_smiles_to_mol_dict</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Generating fepops&quot;</span>
+            <span class="p">):</span>
+                <span class="n">status</span><span class="p">,</span> <span class="n">fepops_array</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">openfepops_object</span><span class="o">.</span><span class="n">get_fepops</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="n">GetFepopStatusCode</span><span class="o">.</span><span class="n">SUCCESS</span> <span class="ow">or</span> <span class="n">add_failures_to_database</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">add_fepop</span><span class="p">(</span><span class="n">rdkit_canonical_smiles</span><span class="p">,</span> <span class="n">fepops_array</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Added </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">canonical_smiles_to_mol_dict</span><span class="p">)</span><span class="si">}</span><span class="s2"> new molecues to the database (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">database_file</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># Do it in parallel</span>
+            <span class="n">n_successes</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">n_failures</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">rdkit_canonical_smiles</span><span class="p">,</span> <span class="p">(</span><span class="n">status</span><span class="p">,</span> <span class="n">new_fepop</span><span class="p">)</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span>
+                <span class="n">mp</span><span class="o">.</span><span class="n">Pool</span><span class="p">(</span>
+                    <span class="c1"># processes=min(len(canonical_smiles_to_mol_dict), mp.cpu_count()),</span>
+                    <span class="n">processes</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                    <span class="n">initializer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_parallel_init_worker_desc_gen_shared_fepops_ob</span><span class="p">,</span>
+                    <span class="n">initargs</span><span class="o">=</span><span class="p">(</span><span class="n">OpenFEPOPS</span><span class="p">(</span><span class="o">**</span><span class="n">fepops_object_constructor_kwargs</span><span class="p">),),</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">imap</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_parallel_get_gen_fepops_descriptors</span><span class="p">,</span>
+                    <span class="n">canonical_smiles_to_mol_dict</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span>
+                <span class="p">),</span>
+                <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Generating descriptors (parallel)&quot;</span><span class="p">,</span>
+                <span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">canonical_smiles_to_mol_dict</span><span class="p">),</span>
+            <span class="p">):</span>
+                <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="n">GetFepopStatusCode</span><span class="o">.</span><span class="n">SUCCESS</span><span class="p">:</span>
+                    <span class="n">n_successes</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">n_failures</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="n">GetFepopStatusCode</span><span class="o">.</span><span class="n">SUCCESS</span> <span class="ow">or</span> <span class="n">add_failures_to_database</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">add_fepop</span><span class="p">(</span><span class="n">rdkit_canonical_smiles</span><span class="p">,</span> <span class="n">new_fepop</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Successfully added </span><span class="si">{</span><span class="n">n_successes</span><span class="si">}</span><span class="s2"> new molecues to the database (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">database_file</span><span class="si">}</span><span class="s2">), </span><span class="si">{</span><span class="n">n_failures</span><span class="si">}</span><span class="s2"> failed&quot;</span>
+            <span class="p">)</span></div>
+
+<div class="viewcode-block" id="FepopsPersistentAbstractBaseClass.add_fepop"><a class="viewcode-back" href="../../../fepops.fepops_persistent.html#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.add_fepop">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">add_fepop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rdkit_canonical_smiles</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">fepops</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add canonical smiles and fepop to database. Must be overridden</span>
+
+<span class="sd">        This abstractmethod must be overridden by the inheriting object, but</span>
+<span class="sd">        provides some functionality for sanity checking input and may be called</span>
+<span class="sd">        by the inheriting class.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rdkit_canonical_smiles</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Expected an rdkit canonical smiles string, but a </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">rdkit_canonical_smiles</span><span class="p">)</span><span class="si">}</span><span class="s2"> was passed&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fepops</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected a fepop, but a </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">fepops</span><span class="p">)</span><span class="si">}</span><span class="s2"> was passed&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="FepopsPersistentAbstractBaseClass.get_fepops"><a class="viewcode-back" href="../../../fepops.fepops_persistent.html#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.get_fepops">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_fepops</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">smiles</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Chem</span><span class="o">.</span><span class="n">rdchem</span><span class="o">.</span><span class="n">Mol</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">is_canonical</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get a FEPOP from the database using its SMILES. Must be overridden</span>
+
+<span class="sd">        This abstractmethod must be overridden by the inheriting object, but</span>
+<span class="sd">        provides some functionality for sanity checking input and may be called</span>
+<span class="sd">        by the inheriting class.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        smiles : Union[str, Chem.rdchem.Mol, np.ndarray]</span>
+<span class="sd">            _description_</span>
+<span class="sd">        is_canonical : bool, optional</span>
+<span class="sd">            If True, then the supplied SMILES are guaranteed to be canonical</span>
+<span class="sd">            SMILES generated by RDKit which allows skipping of a sanitisation</span>
+<span class="sd">            step, by default True</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">smiles</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Chem</span><span class="o">.</span><span class="n">rdchem</span><span class="o">.</span><span class="n">Mol</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Expected an rdkit canonical smiles string, rdkit mol, or a numpy array of descriptors but a </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">smiles</span><span class="p">)</span><span class="si">}</span><span class="s2"> was passed: </span><span class="si">{</span><span class="n">smiles</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span></div>
+
+<div class="viewcode-block" id="FepopsPersistentAbstractBaseClass.fepop_exists"><a class="viewcode-back" href="../../../fepops.fepops_persistent.html#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.fepop_exists">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">fepop_exists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rdkit_canonical_smiles</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if canonical smiles already exist in the database</span>
+
+<span class="sd">        This abstractmethod must be overridden by the inheriting object, but</span>
+<span class="sd">        provides some functionality for sanity checking input and may be called</span>
+<span class="sd">        by the inheriting class.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rdkit_canonical_smiles</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Expected an rdkit canonical smiles string, but a </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">rdkit_canonical_smiles</span><span class="p">)</span><span class="si">}</span><span class="s2"> was passed&quot;</span>
+            <span class="p">)</span></div>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_get_can_smi_mol_tuple</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">smiles_guaranteed_rdkit_canonical</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">mol</span> <span class="o">=</span> <span class="n">Chem</span><span class="o">.</span><span class="n">MolFromSmiles</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">mol</span> <span class="o">=</span> <span class="n">Chem</span><span class="o">.</span><span class="n">MolFromSmiles</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">sanitize</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">mol</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">mol</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Could not parse smiles to a valid molecule, smiles was: </span><span class="si">{</span><span class="n">s</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">mol</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">smiles_guaranteed_rdkit_canonical</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">mol</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">Chem</span><span class="o">.</span><span class="n">MolToSmiles</span><span class="p">(</span><span class="n">mol</span><span class="p">),</span> <span class="n">mol</span><span class="p">)</span>
+
+<div class="viewcode-block" id="FepopsPersistentAbstractBaseClass.get_cansmi_to_mol_dict_not_in_database"><a class="viewcode-back" href="../../../fepops.fepops_persistent.html#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.get_cansmi_to_mol_dict_not_in_database">[docs]</a>    <span class="k">def</span> <span class="nf">get_cansmi_to_mol_dict_not_in_database</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">smiles</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+        <span class="n">smiles_guaranteed_rdkit_canonical</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get smiles to mol dict for smiles not in the database</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        smiles : Union[str, Path, list[str]]</span>
+<span class="sd">            If a string is passed, then it is assumed to be a file path of</span>
+<span class="sd">            SMILES file and this file is loaded for processing. Similarly, Path</span>
+<span class="sd">            objects are assumed to point at SMILES files for processing. If</span>
+<span class="sd">            passing smiles strings to this function, the wrap the string in a</span>
+<span class="sd">            list (making a list containing only one element), or provide large</span>
+<span class="sd">            multi-SMILES lists which will be operated upon directly</span>
+<span class="sd">        smiles_guaranteed_rdkit_canonical : bool, optional</span>
+<span class="sd">            If the supplied SMILES are canonical RDKit-generated SMILES, then</span>
+<span class="sd">            regeneration of these SMILES strings for uniquification and database</span>
+<span class="sd">            lookup may be skipped, by default False</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            Dictionary with SMILES as keys and RDKit molecules as the values for</span>
+<span class="sd">            molecules not present in the current database</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">smiles</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">smiles</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">smiles</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">smiles</span><span class="p">,</span> <span class="n">Path</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">smiles</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="n">smiles</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">s</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">open</span><span class="p">(</span><span class="n">smiles</span><span class="p">)</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">0</span>
+                <span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;smiles file (</span><span class="si">{</span><span class="n">smiles</span><span class="si">}</span><span class="s2">) not found. If you are passing smiles, place it into a list first&quot;</span>
+                <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">smiles</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;smiles should be a str or Path denoting the location of a smiles file, or a list of smiles&quot;</span>
+            <span class="p">)</span>
+        <span class="n">smiles</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">smiles</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Got </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">smiles</span><span class="p">)</span><span class="si">}</span><span class="s2"> unique SMILES strings&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">parallel</span><span class="p">:</span>
+            <span class="c1"># Ensure unique (canonical, also storing intermediate mol)</span>
+            <span class="n">canonical_smiles_to_mol_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_get_can_smi_mol_tuple</span><span class="p">(</span>
+                    <span class="n">s</span><span class="p">,</span>
+                    <span class="n">smiles_guaranteed_rdkit_canonical</span><span class="o">=</span><span class="n">smiles_guaranteed_rdkit_canonical</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">smiles</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Uniquifying input smiles (non-parallel)&quot;</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">tmp_res_list</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="c1"># Ensure unique (canonical, also storing intermediate mol)</span>
+            <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span>
+                <span class="n">mp</span><span class="o">.</span><span class="n">Pool</span><span class="p">(</span>
+                    <span class="n">initializer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_parallel_init_worker_get_cansmi_mol_tuple</span><span class="p">,</span>
+                    <span class="n">initargs</span><span class="o">=</span><span class="p">(</span><span class="n">smiles_guaranteed_rdkit_canonical</span><span class="p">,),</span>
+                    <span class="n">processes</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">smiles</span><span class="p">)</span> <span class="o">/</span> <span class="mi">50</span><span class="p">,</span> <span class="n">mp</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">())),</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parallel_get_cansmi_tuple</span><span class="p">,</span> <span class="n">smiles</span><span class="p">,</span> <span class="n">chunksize</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+                <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Uniquifying input smiles (parallel)&quot;</span><span class="p">,</span>
+                <span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">smiles</span><span class="p">),</span>
+            <span class="p">):</span>
+                <span class="n">tmp_res_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+
+            <span class="n">canonical_smiles_to_mol_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">tmp_res_list</span><span class="p">)</span>
+
+            <span class="k">del</span> <span class="n">tmp_res_list</span>
+        <span class="c1"># Make sure none are already in the database</span>
+        <span class="n">canonical_smiles_to_mol_dict</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">cansmi</span><span class="p">:</span> <span class="n">mol</span>
+            <span class="k">for</span> <span class="n">cansmi</span><span class="p">,</span> <span class="n">mol</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span>
+                <span class="n">canonical_smiles_to_mol_dict</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span>
+                <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Checking if mols already exist in the database&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">fepop_exists</span><span class="p">(</span><span class="n">cansmi</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Got </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">canonical_smiles_to_mol_dict</span><span class="p">)</span><span class="si">}</span><span class="s2"> unique molecules not already in the database&quot;</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">canonical_smiles_to_mol_dict</span></div>
+
+<div class="viewcode-block" id="FepopsPersistentAbstractBaseClass.calc_similarity"><a class="viewcode-back" href="../../../fepops.fepops_persistent.html#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.calc_similarity">[docs]</a>    <span class="k">def</span> <span class="nf">calc_similarity</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">fepops_features_1</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span>
+        <span class="n">fepops_features_2</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span>
+        <span class="n">is_canonical</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate FEPOPS similarity</span>
+
+<span class="sd">        A static method for calculating molecular similarity based on their FEPOPS descriptors.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fepops_features_1 : Union[np.ndarray, str, None]</span>
+<span class="sd">            A Numpy array containing the FEPOPS descriptors of the query molecule</span>
+<span class="sd">            or a smiles string from which to generate FEPOPS descriptors for the</span>
+<span class="sd">            query molecule.</span>
+<span class="sd">        fepops_features_2 : Union[np.ndarray, str, None, list[np.ndarray, str, None]]</span>
+<span class="sd">            A Numpy array containing the FEPOPS descriptors of the candidate</span>
+<span class="sd">            molecule or a smiles string from which to generate FEPOPS descriptors</span>
+<span class="sd">            for the candidate molecule.  Can also be None, in which case, np.nan is</span>
+<span class="sd">            returned as a score, or a list of any of these. If it is a list,</span>
+<span class="sd">            then a list of scores against the single candidate is returned.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">                Fepops similarity between two molecules</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">fepops_features_1</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fepops_features_1</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Chem</span><span class="o">.</span><span class="n">rdchem</span><span class="o">.</span><span class="n">Mol</span><span class="p">)):</span>
+            <span class="n">status</span><span class="p">,</span> <span class="n">fepops_features_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_fepops</span><span class="p">(</span>
+                <span class="n">fepops_features_1</span><span class="p">,</span> <span class="n">is_canonical</span><span class="o">=</span><span class="n">is_canonical</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">status</span> <span class="o">!=</span> <span class="n">GetFepopStatusCode</span><span class="o">.</span><span class="n">SUCCESS</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fepops_features_2</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">new_fepops_features_2</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">fepops_features_2</span><span class="p">:</span>
+                <span class="n">status</span><span class="p">,</span> <span class="n">fpop</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_fepops</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">is_canonical</span><span class="o">=</span><span class="n">is_canonical</span><span class="p">)</span>
+                <span class="n">new_fepops_features_2</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">fpop</span> <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="n">GetFepopStatusCode</span><span class="o">.</span><span class="n">SUCCESS</span> <span class="k">else</span> <span class="kc">None</span>
+                <span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">openfepops_object</span><span class="o">.</span><span class="n">calc_similarity</span><span class="p">(</span>
+                <span class="n">fepops_features_1</span><span class="p">,</span> <span class="n">new_fepops_features_2</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fepops_features_2</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Chem</span><span class="o">.</span><span class="n">rdchem</span><span class="o">.</span><span class="n">Mol</span><span class="p">)):</span>
+            <span class="n">status</span><span class="p">,</span> <span class="n">fepops_features_2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_fepops</span><span class="p">(</span>
+                <span class="n">fepops_features_2</span><span class="p">,</span> <span class="n">is_canonical</span><span class="o">=</span><span class="n">is_canonical</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">status</span> <span class="o">!=</span> <span class="n">GetFepopStatusCode</span><span class="o">.</span><span class="n">SUCCESS</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="p">(</span><span class="n">fepops_features_1</span><span class="p">,</span> <span class="n">fepops_features_2</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">score</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">openfepops_object</span><span class="o">.</span><span class="n">calc_similarity</span><span class="p">(</span>
+            <span class="n">fepops_features_1</span><span class="p">,</span> <span class="n">fepops_features_2</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">score</span> <span class="k">if</span> <span class="n">score</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span></div>
+
+<div class="viewcode-block" id="FepopsPersistentAbstractBaseClass.write"><a class="viewcode-back" href="../../../fepops.fepops_persistent.html#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.write">[docs]</a>    <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+
+    <span class="k">def</span> <span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exc_type</span><span class="p">,</span> <span class="n">exc_value</span><span class="p">,</span> <span class="n">traceback</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write</span><span class="p">()</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Yan-Kai Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Readme &mdash; OpenFEPOPS 1.8.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="&lt;no title&gt;" href="modules.html" />
+    <link rel="prev" title="Welcome to OpenFEPOPS’s documentation" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            OpenFEPOPS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Readme</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#statement-of-need">Statement of need</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#benchmarking">Benchmarking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#method-description">Method description</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#descriptor-generation"><em>Descriptor generation</em></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scoring-and-comparison-of-molecules-based-on-their-molecular-descriptors">Scoring and comparison of molecules based on their molecular descriptors</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#installation">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#testing">Testing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#requirements">Requirements</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#usage">Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#command-line-usage">Command line usage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#example-calculating-molecular-similarity-between-two-molecules-ibuprofen-and-diclofenac">Example: Calculating molecular similarity between two molecules (ibuprofen and diclofenac)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-get-the-fepops-descriptors-for-diclofenac">Example: Get the FEPOPS descriptors for diclofenac</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-pregenerating-descriptors-for-an-in-house-compound-archive">Example: pregenerating descriptors for an in-house compound archive</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API documentation:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="fepops.html">fepops package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">OpenFEPOPS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Readme</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/readme.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="readme">
+<h1>Readme<a class="headerlink" href="#readme" title="Permalink to this heading"></a></h1>
+<p><a class="reference external" href="https://joss.theoj.org/papers/b4ab6027d3eca941ca7b3ffc70e636d8"><img alt="status" src="https://joss.theoj.org/papers/b4ab6027d3eca941ca7b3ffc70e636d8/status.svg" /></a></p>
+<p>OpenFEPOPS is an open-source Python implementation of the FEPOPS molecular similarity technique enabling descriptor generation, comparison, and ranking of molecules in virtual screening campaigns. The central idea behind FEPOPS is reducing the complexity of molecules by merging of local atomic environments and atom properties into ‘feature points’. This compressed feature point representation has been used to great effect as noted in literature, helping researchers identify active and potentially therapeutically valuable small molecules. This implementation was recreated following the original paper: <a class="reference external" href="https://pubs.acs.org/doi/10.1021/jm049654z">https://pubs.acs.org/doi/10.1021/jm049654z</a>. By default, OpenFEPOPS uses literature reported parameters which show good performance in retrieval of active lead- and drug-like small molecules within virtual screening campaigns, with feature points capturing charge, lipophilicity, and hydrogen bond acceptor and donor status. When run with default parameters, OpenFepops compactly represents molecules using sets of four feature points, with each feature point encoded into 22 numeric values, resulting in a compact representation of 616 bytes per molecule. By extension, this allows the indexing of a compound archive containing 1 million small molecules using only 587.5 MB of data. Whilst more compact representations are readily available, the FEPOPS technique strives to capture tautomer and conformer information, first through enumeration and then through diversity driven selection of representative FEPOPS descriptors to capture the diverse states that a molecule may adopt.</p>
+</section>
+<section id="statement-of-need">
+<h1>Statement of need<a class="headerlink" href="#statement-of-need" title="Permalink to this heading"></a></h1>
+<p>At the time of writing, OpenFEPOPS is the only publicly available implementation of the FEPOPS molecular similarity technique. Whilst used within industry and referenced extensively in literature, it has been unavailable to researchers as an open-source tool. We welcome contributions and collaborative efforts to enhance and expand OpenFEPOPS using the associated GitHub repository. It is therefore hoped that this will allow the technique to be used not only for traditional small molecule molecular similarity, but also in new emerging fields such as protein design and featurization of small- and macro-molecules for both predictive and generative tasks.</p>
+</section>
+<section id="benchmarking">
+<h1>Benchmarking<a class="headerlink" href="#benchmarking" title="Permalink to this heading"></a></h1>
+<p>OpenFEPOPS has been benchmarked alongside some commonly used fingerprints against the DUDE diversity set and scores as follows:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head text-right"><p>Target</p></th>
+<th class="head text-right"><p>Morgan 2</p></th>
+<th class="head text-right"><p>MACCS</p></th>
+<th class="head text-right"><p>RDKit</p></th>
+<th class="head text-right"><p>OpenFEPOPS</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td class="text-right"><p>akt1</p></td>
+<td class="text-right"><p>0.836</p></td>
+<td class="text-right"><p>0.741</p></td>
+<td class="text-right"><p>0.833</p></td>
+<td class="text-right"><p>0.831</p></td>
+</tr>
+<tr class="row-odd"><td class="text-right"><p>ampc</p></td>
+<td class="text-right"><p>0.784</p></td>
+<td class="text-right"><p>0.673</p></td>
+<td class="text-right"><p>0.660</p></td>
+<td class="text-right"><p>0.639</p></td>
+</tr>
+<tr class="row-even"><td class="text-right"><p>cp3a4</p></td>
+<td class="text-right"><p>0.603</p></td>
+<td class="text-right"><p>0.582</p></td>
+<td class="text-right"><p>0.613</p></td>
+<td class="text-right"><p>0.647</p></td>
+</tr>
+<tr class="row-odd"><td class="text-right"><p>cxcr4</p></td>
+<td class="text-right"><p>0.697</p></td>
+<td class="text-right"><p>0.854</p></td>
+<td class="text-right"><p>0.592</p></td>
+<td class="text-right"><p>0.899</p></td>
+</tr>
+<tr class="row-even"><td class="text-right"><p>gcr</p></td>
+<td class="text-right"><p>0.670</p></td>
+<td class="text-right"><p>0.666</p></td>
+<td class="text-right"><p>0.708</p></td>
+<td class="text-right"><p>0.616</p></td>
+</tr>
+<tr class="row-odd"><td class="text-right"><p>hivpr</p></td>
+<td class="text-right"><p>0.780</p></td>
+<td class="text-right"><p>0.681</p></td>
+<td class="text-right"><p>0.759</p></td>
+<td class="text-right"><p>0.678</p></td>
+</tr>
+<tr class="row-even"><td class="text-right"><p>hivrt</p></td>
+<td class="text-right"><p>0.651</p></td>
+<td class="text-right"><p>0.670</p></td>
+<td class="text-right"><p>0.660</p></td>
+<td class="text-right"><p>0.582</p></td>
+</tr>
+<tr class="row-odd"><td class="text-right"><p>kif11</p></td>
+<td class="text-right"><p>0.763</p></td>
+<td class="text-right"><p>0.668</p></td>
+<td class="text-right"><p>0.672</p></td>
+<td class="text-right"><p>0.713</p></td>
+</tr>
+</tbody>
+</table>
+<p><em>Average AUROC scores by target and molecular similarity technique for the DUDE diversity set. Across all datasets, 19 small molecules out of 112,796 were excluded from analysis mainly due to issues in parsing to valid structures using RDKit.  See ‘Explore_DUDE_diversity_set.ipynb’ for further information</em></p>
+</section>
+<section id="method-description">
+<h1>Method description<a class="headerlink" href="#method-description" title="Permalink to this heading"></a></h1>
+<p>Whilst OpenFEPOPS has included functionality for descriptor caching and profiling of libraries, the core functionality of the package is descriptor generation and scoring.</p>
+<section id="descriptor-generation">
+<h2><em>Descriptor generation</em><a class="headerlink" href="#descriptor-generation" title="Permalink to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p>Tautomer enumeration</p>
+<ul class="simple">
+<li><p>For a given small molecule, OpenFEPOPS uses RDKit to iterate over molecular tautomers. By default, there is no limit to the number of recoverable tautomers but a limit may be imposed which may be necessary if adapting the OpenFEPOPS code to large macromolecules and not just small molecules.</p></li>
+</ul>
+</li>
+<li><p>Conformer enumeration</p>
+<ul class="simple">
+<li><p>For each tautomer, up to 1024 conformers are sampled by either complete enumeration of rotatable bond states (at the literature reported optimum increment of 90 degrees) if there are five or less rotatable bonds, or through random sampling of 1024 possible states if there are more than 5 rotatable bonds.</p></li>
+</ul>
+</li>
+<li><p>Defining feature points</p>
+<ul class="simple">
+<li><p>The KMeans algorithm is applied to each conformer of each tautomer to identify four (by default) representative or central points, into which the atomic information of neighbouring atoms is collapsed. As standard, the atomic properties of charge, logP, hydrogen bond donor, and hydrogen bond acceptor status are collapsed into four feature points per unique tautomer conformation.The RDKit package is used to calculate these properties with the iterative Gasteiger charges algorithm applied to assign atomic charges, the Crippen method used to assign atomic logP contributions, and hydrogen bond acceptors and donors identified with appropriate SMARTS substructure queries.These feature points are encoded to 22 numeric values (a FEPOP) comprising four points, each with four properties, and six pairwise distances between these points. With many FEPOPS descriptors collected from a single molecule through tautomer and conformer enumeration, this set of representative FEPOPS should capture every possible state of the original molecule.</p></li>
+</ul>
+</li>
+<li><p>Selection of diverse FEPOPS</p>
+<ul class="simple">
+<li><p>From the collection of FEPOPS derived from every tautomer conformation of a molecule, the K-Medoid algorithm is applied to identify seven (by default) diverse FEPOPS which are thought to best capture a fuzzy representation of the molecule. These seven FEPOPS each comprise 22 descriptors each, totalling 154 32-bit floating point numbers or 616 bytes.</p></li>
+</ul>
+</li>
+</ol>
+<p><img alt="OpenFEPOPS descriptor generation showing the capture of tautomer and conformer information from a single input molecule.abel{fig:descriptor_generation}" src="_images/Figure1.png" /></p>
+<p>Descriptor generation with OpenFEPOPS is a compute intensive task and as noted in literature, designed to be run in situations where large compound archives have had their descriptors pre-generated and are queried against realatively small numbers of new molecules for which descriptors are not known and are generated. To enable use in this manner, OpenFEPOPS provides functionality to cache descriptors through specification of database files, either in the SQLite or JSON formats.</p>
+</section>
+<section id="scoring-and-comparison-of-molecules-based-on-their-molecular-descriptors">
+<h2>Scoring and comparison of molecules based on their molecular descriptors<a class="headerlink" href="#scoring-and-comparison-of-molecules-based-on-their-molecular-descriptors" title="Permalink to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p>Sorting</p>
+<ul class="simple">
+<li><p>With seven (by default) diverse FEPOPS representing a small molecule, the FEPOPS are sorted by ascending charge.</p></li>
+</ul>
+</li>
+<li><p>Scaling</p>
+<ul class="simple">
+<li><p>Due to the different scales and distributions of features comprising FEPOPS descriptors, each FEPOP is centered and scaled according to observed mean and standard deviations of the same features within a larger pool of molecules. By default, these means and standard deviations have been derived from the DUDE diversity set which captures known actives and decoys for a diverse set of therapeutic targets.</p></li>
+</ul>
+</li>
+<li><p>Scoring</p>
+<ul class="simple">
+<li><p>The Pearson correlation coefficient is calculated for the scaled descriptors of the first molecule to the scaled descriptors of the second.</p></li>
+</ul>
+</li>
+</ol>
+<p>Literature highlights that the choice of the Pearson correlation coefficient leads to high background scores as it is highly unlikely to see little correlation between any molecule due to fundamental limitations of chemistry and geometry. Therefore, unrelated molecules are likely to have FEPOPS similarity scores higher than those encountered with more traditional techniques such as bitstring fingeprints and Tanimoto or Dice similarity measures.</p>
+</section>
+</section>
+<section id="installation">
+<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h1>
+<p>OpenFEPOPS requires Python &gt;=3.9 and may be installed using pip:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">pip install fepops</span>
+</pre></div>
+</div>
+<p>Alternatively, OpenFEPOPS can be installed from source:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">git clone https://github.com/JustinYKC/FEPOPS.git</span>
+<span class="go">cd FEPOPS</span>
+<span class="go">pip install .</span>
+</pre></div>
+</div>
+<p>Or via conda :</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">conda env create -f environment.yml</span>
+</pre></div>
+</div>
+<p>Requirements for developing and contributing to OpenFEPOPS can be installed from source:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">git clone https://github.com/JustinYKC/FEPOPS.git</span>
+<span class="go">cd FEPOPS</span>
+<span class="go">pip install .[dev]</span>
+</pre></div>
+</div>
+<section id="testing">
+<h2>Testing<a class="headerlink" href="#testing" title="Permalink to this heading"></a></h2>
+<p>Tests may be run using the pytest framework. With the development dependencies installed (see above), simply running:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">pytest</span>
+</pre></div>
+</div>
+<p>will run the built in tests.</p>
+</section>
+<section id="requirements">
+<h2>Requirements<a class="headerlink" href="#requirements" title="Permalink to this heading"></a></h2>
+<p>OpenFEPOPS requires the following packages:</p>
+<ul class="simple">
+<li><p>rdkit (&gt;=2021.9.5.1)</p></li>
+<li><p>numpy (&gt;=1.22.4)</p></li>
+<li><p>pandas (&gt;=1.5.0)</p></li>
+<li><p>scikit-learn (&gt;=1.3.x)</p></li>
+<li><p>scipy (&gt;=1.7.x)</p></li>
+<li><p>torch (&gt;=1.7.1)</p></li>
+<li><p>fast-pytorch-kmeans (&gt;=0.1.9)</p></li>
+<li><p>fire (&gt;=0.5.x)</p></li>
+<li><p>tqdm (&gt;=4.48.0)</p></li>
+</ul>
+</section>
+</section>
+<section id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Permalink to this heading"></a></h1>
+<p>OpenFEPOPS has been uploaded to the Python Packaging Index under the name ‘fepops’ and as such is installable using the pip package manager and the command ‘pip install fepops’. With the package installed, entrypoints are used to expose commonly used OpenFEPOPS tasks such as descriptor generation and calculation on molecular similarity, enabling simple command line access without the need to explicitly invoke a Python interpreter. Whilst OpenFEPOPS may be used solely via the command line interface, a robust API is available and may be used within other programs or integrated into existing pipelines to enable more complex workflows.  API documentation is available at https://justinykc.github.io/FEPOPS.</p>
+<section id="command-line-usage">
+<h2>Command line usage<a class="headerlink" href="#command-line-usage" title="Permalink to this heading"></a></h2>
+<p>With OpenFEPOPS installed to a Python environment, entrypoints in the code and a command line interface control object allow omission of the python interpreter program when calling common OpenFEPOPS tasks. This allows command line usage of the form:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">fepops &lt;subcommand&gt; &lt;arguments&gt;</span>
+</pre></div>
+</div>
+<p>These sub-commands to carry out common tasks are:</p>
+<ol class="arabic simple">
+<li><p>calc_sim</p>
+<ul class="simple">
+<li><p>Calculates the molecular similarity of two supplied molecules as SMILES strings.</p></li>
+</ul>
+</li>
+<li><p>get_fepops</p>
+<ul class="simple">
+<li><p>Calculate and print out the molecular descriptors of a molecule supplied as a SMILES string</p></li>
+</ul>
+</li>
+<li><p>save_descriptors</p>
+<ul class="simple">
+<li><p>To be used in conjunction with the –database_file switch (see below) which enables writing of generated descriptors to a SQLite or JSON database/file cache. A list of smiles, or the location of a SMILES file may be passed here. If passing a single molecule, then enclose the smiles in square brackets so that it is passed as a list containing one item.</p></li>
+</ul>
+</li>
+</ol>
+<p>A database or cache file may be supplied for use with all subcommands using the –database_file switch before the subcommand as follows:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">fepops --database_file=&lt;DB_file_path&gt; &lt;subcommand&gt; &lt;arguments&gt;</span>
+</pre></div>
+</div>
+<p>Depending on the supplied file extension of &lt;DB_file_path&gt;, either a SQLite file (“.sqlite”, “.sqlite3”, “.db”, “.db3”, “.s3db”, or “.sl3” file extensions) is created or loaded for the appending of data, or a JSON file is used (when the extension is “.json”).</p>
+<p>Additionally, a file to which JSON formatted ouput should be written to can be supplied with the –json_file flag when using the calc_sim and get_fepops commands as follows:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">fepops --database_file=&lt;DB_file_path&gt; --json_file=&lt;JSON_file_path&gt; get_fepops &lt;arguments&gt;</span>
+<span class="go">fepops --database_file=&lt;DB_file_path&gt; --json_file=&lt;JSON_file_path&gt; calc_sim &lt;arguments&gt;</span>
+</pre></div>
+</div>
+<p>where &lt;JSON_file_path&gt; is the path to where JSON formatted output should be written.</p>
+<p>Running OpenFEPOPS with the -h switch prints help to the terminal and it may also be used after sub-command switches to inspect required arguments.</p>
+<section id="example-calculating-molecular-similarity-between-two-molecules-ibuprofen-and-diclofenac">
+<h3>Example: Calculating molecular similarity between two molecules (ibuprofen and diclofenac)<a class="headerlink" href="#example-calculating-molecular-similarity-between-two-molecules-ibuprofen-and-diclofenac" title="Permalink to this heading"></a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">fepops calc_sim &quot;CC(Cc1ccc(cc1)C(C(=O)O)C)C&quot; &quot;OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl&quot;</span>
+</pre></div>
+</div>
+<p>Note the use of quotes around the smiles strings. This is required as BASH and other shells will try to parse the brackets often present in smiles to denote branching.</p>
+<p>Output may be directed to a JSON file as follows:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">fepops --json_file=&quot;example_fepops_score.json&quot; calc_sim &quot;CC(Cc1ccc(cc1)C(C(=O)O)C)C&quot; &quot;OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl&quot;</span>
+</pre></div>
+</div>
+<p>The file ‘example_fepops_score.json’ then contains output of the form:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="s2">&quot;SMI1&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;CC(Cc1ccc(cc1)C(C(=O)O)C)C&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;SMI2&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;FEPOPS Similarity Score&quot;</span><span class="o">:</span><span class="w"> </span><span class="mf">0.14135371590471596</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="example-get-the-fepops-descriptors-for-diclofenac">
+<h3>Example: Get the FEPOPS descriptors for diclofenac<a class="headerlink" href="#example-get-the-fepops-descriptors-for-diclofenac" title="Permalink to this heading"></a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">fepops get_fepops &quot;OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl&quot;</span>
+</pre></div>
+</div>
+<p>Again, output may be directed to a JSON file as follows:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">fepops --json_file=&quot;example_diclofenac_fepops_descriptors.json&quot; get_fepops &quot;OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl&quot;</span>
+</pre></div>
+</div>
+<p>The file ‘example_fepops_score.json’ then contains output of the form below. For brevity, output is truncated at the first of 7 FEPOPS, truncation marked by TRUNCATION:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="s2">&quot;SMILES&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;FepopStatusCode&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;SUCCESS&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;Fepops&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">[</span>
+<span class="w">            </span><span class="o">-</span><span class="mf">0.5684914743317748</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">1.3061</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">1.0</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">1.0</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">0.02878293161743492</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">0.8432999999999999</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">0.0</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">1.0</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">0.1949443985093149</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">1.0734</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">0.0</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">1.0</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">0.3447641442050251</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">1.1413</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">0.0</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">1.0</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">2.52506114069371</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">4.753703619492762</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">3.216333750680169</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">4.563318239587458</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">2.9657848574016255</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">7.096648170644156</span>
+<span class="w">        </span><span class="p">],</span>
+<span class="w">    </span><span class="nx">TRUNCATION</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="example-pregenerating-descriptors-for-an-in-house-compound-archive">
+<h3>Example: pregenerating descriptors for an in-house compound archive<a class="headerlink" href="#example-pregenerating-descriptors-for-an-in-house-compound-archive" title="Permalink to this heading"></a></h3>
+<p>With a SMILES file called ‘inhouse_compounds.smi’, we may pre-generate their FEPOPS descriptors for faster use and comparison against new molecules.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">fepops --database_file=inhouse_compounds.db save_descriptors inhouse_compounds.smi</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to OpenFEPOPS’s documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="modules.html" class="btn btn-neutral float-right" title="&lt;no title&gt;" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Yan-Kai Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>fepops package &mdash; OpenFEPOPS 1.8.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="fepops.fepops_persistent package" href="fepops.fepops_persistent.html" />
+    <link rel="prev" title="&lt;no title&gt;" href="modules.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            OpenFEPOPS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="readme.html">Readme</a></li>
+<li class="toctree-l1"><a class="reference internal" href="readme.html#statement-of-need">Statement of need</a></li>
+<li class="toctree-l1"><a class="reference internal" href="readme.html#benchmarking">Benchmarking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="readme.html#method-description">Method description</a></li>
+<li class="toctree-l1"><a class="reference internal" href="readme.html#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="readme.html#usage">Usage</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API documentation:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">fepops package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fepops.fepops_persistent.html">fepops.fepops_persistent package</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-fepops.fepops">fepops.fepops module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#fepops.fepops.GetFepopStatusCode"><code class="docutils literal notranslate"><span class="pre">GetFepopStatusCode</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#fepops.fepops.GetFepopStatusCode.FAILED_RETRIEVED_NONE"><code class="docutils literal notranslate"><span class="pre">GetFepopStatusCode.FAILED_RETRIEVED_NONE</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#fepops.fepops.GetFepopStatusCode.FAILED_TO_GENERATE"><code class="docutils literal notranslate"><span class="pre">GetFepopStatusCode.FAILED_TO_GENERATE</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#fepops.fepops.GetFepopStatusCode.FAILED_TO_RETRIEVE"><code class="docutils literal notranslate"><span class="pre">GetFepopStatusCode.FAILED_TO_RETRIEVE</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#fepops.fepops.GetFepopStatusCode.SUCCESS"><code class="docutils literal notranslate"><span class="pre">GetFepopStatusCode.SUCCESS</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#fepops.fepops.OpenFEPOPS"><code class="docutils literal notranslate"><span class="pre">OpenFEPOPS</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#fepops.fepops.OpenFEPOPS.calc_similarity"><code class="docutils literal notranslate"><span class="pre">OpenFEPOPS.calc_similarity()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#fepops.fepops.OpenFEPOPS.generate_conformers"><code class="docutils literal notranslate"><span class="pre">OpenFEPOPS.generate_conformers()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#fepops.fepops.OpenFEPOPS.get_centroid_pharmacophoric_features"><code class="docutils literal notranslate"><span class="pre">OpenFEPOPS.get_centroid_pharmacophoric_features()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#fepops.fepops.OpenFEPOPS.get_fepops"><code class="docutils literal notranslate"><span class="pre">OpenFEPOPS.get_fepops()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#fepops.fepops.OpenFEPOPS.pairwise_correlation"><code class="docutils literal notranslate"><span class="pre">OpenFEPOPS.pairwise_correlation()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-fepops">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">OpenFEPOPS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">&lt;no title&gt;</a></li>
+      <li class="breadcrumb-item active">fepops package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/fepops.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="fepops-package">
+<h1>fepops package<a class="headerlink" href="#fepops-package" title="Permalink to this heading"></a></h1>
+<section id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="fepops.fepops_persistent.html">fepops.fepops_persistent package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="fepops.fepops_persistent.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fepops.fepops_persistent.html#module-fepops.fepops_persistent.fepops_persistent_abc">fepops.fepops_persistent.fepops_persistent_abc module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fepops.fepops_persistent.html#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass"><code class="docutils literal notranslate"><span class="pre">FepopsPersistentAbstractBaseClass</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fepops.fepops_persistent.html#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.add_fepop"><code class="docutils literal notranslate"><span class="pre">FepopsPersistentAbstractBaseClass.add_fepop()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.fepops_persistent.html#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.calc_similarity"><code class="docutils literal notranslate"><span class="pre">FepopsPersistentAbstractBaseClass.calc_similarity()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.fepops_persistent.html#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.fepop_exists"><code class="docutils literal notranslate"><span class="pre">FepopsPersistentAbstractBaseClass.fepop_exists()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.fepops_persistent.html#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.get_cansmi_to_mol_dict_not_in_database"><code class="docutils literal notranslate"><span class="pre">FepopsPersistentAbstractBaseClass.get_cansmi_to_mol_dict_not_in_database()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.fepops_persistent.html#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.get_fepops"><code class="docutils literal notranslate"><span class="pre">FepopsPersistentAbstractBaseClass.get_fepops()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.fepops_persistent.html#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.save_descriptors"><code class="docutils literal notranslate"><span class="pre">FepopsPersistentAbstractBaseClass.save_descriptors()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.fepops_persistent.html#fepops.fepops_persistent.fepops_persistent_abc.FepopsPersistentAbstractBaseClass.write"><code class="docutils literal notranslate"><span class="pre">FepopsPersistentAbstractBaseClass.write()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fepops.fepops_persistent.html#module-fepops.fepops_persistent.fepopsdb_json">fepops.fepops_persistent.fepopsdb_json module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fepops.fepops_persistent.html#fepops.fepops_persistent.fepopsdb_json.FepopsDBJSON"><code class="docutils literal notranslate"><span class="pre">FepopsDBJSON</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fepops.fepops_persistent.html#fepops.fepops_persistent.fepopsdb_json.FepopsDBJSON.add_fepop"><code class="docutils literal notranslate"><span class="pre">FepopsDBJSON.add_fepop()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.fepops_persistent.html#fepops.fepops_persistent.fepopsdb_json.FepopsDBJSON.fepop_exists"><code class="docutils literal notranslate"><span class="pre">FepopsDBJSON.fepop_exists()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.fepops_persistent.html#fepops.fepops_persistent.fepopsdb_json.FepopsDBJSON.get_fepops"><code class="docutils literal notranslate"><span class="pre">FepopsDBJSON.get_fepops()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.fepops_persistent.html#fepops.fepops_persistent.fepopsdb_json.FepopsDBJSON.write"><code class="docutils literal notranslate"><span class="pre">FepopsDBJSON.write()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fepops.fepops_persistent.html#module-fepops.fepops_persistent.fepopsdb_sqlite">fepops.fepops_persistent.fepopsdb_sqlite module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fepops.fepops_persistent.html#fepops.fepops_persistent.fepopsdb_sqlite.FepopsDBSqlite"><code class="docutils literal notranslate"><span class="pre">FepopsDBSqlite</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fepops.fepops_persistent.html#fepops.fepops_persistent.fepopsdb_sqlite.FepopsDBSqlite.add_fepop"><code class="docutils literal notranslate"><span class="pre">FepopsDBSqlite.add_fepop()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.fepops_persistent.html#fepops.fepops_persistent.fepopsdb_sqlite.FepopsDBSqlite.fepop_exists"><code class="docutils literal notranslate"><span class="pre">FepopsDBSqlite.fepop_exists()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.fepops_persistent.html#fepops.fepops_persistent.fepopsdb_sqlite.FepopsDBSqlite.get_fepops"><code class="docutils literal notranslate"><span class="pre">FepopsDBSqlite.get_fepops()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fepops.fepops_persistent.html#module-fepops.fepops_persistent.utils">fepops.fepops_persistent.utils module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fepops.fepops_persistent.html#fepops.fepops_persistent.utils.get_persistent_fepops_storage_object"><code class="docutils literal notranslate"><span class="pre">get_persistent_fepops_storage_object()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fepops.fepops_persistent.html#module-fepops.fepops_persistent">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this heading"></a></h2>
+</section>
+<section id="module-fepops.fepops">
+<span id="fepops-fepops-module"></span><h2>fepops.fepops module<a class="headerlink" href="#module-fepops.fepops" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="fepops.fepops.GetFepopStatusCode">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">fepops.fepops.</span></span><span class="sig-name descname"><span class="pre">GetFepopStatusCode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fepops.fepops.GetFepopStatusCode" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="fepops.fepops.GetFepopStatusCode.FAILED_RETRIEVED_NONE">
+<span class="sig-name descname"><span class="pre">FAILED_RETRIEVED_NONE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">4</span></em><a class="headerlink" href="#fepops.fepops.GetFepopStatusCode.FAILED_RETRIEVED_NONE" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="fepops.fepops.GetFepopStatusCode.FAILED_TO_GENERATE">
+<span class="sig-name descname"><span class="pre">FAILED_TO_GENERATE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#fepops.fepops.GetFepopStatusCode.FAILED_TO_GENERATE" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="fepops.fepops.GetFepopStatusCode.FAILED_TO_RETRIEVE">
+<span class="sig-name descname"><span class="pre">FAILED_TO_RETRIEVE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">3</span></em><a class="headerlink" href="#fepops.fepops.GetFepopStatusCode.FAILED_TO_RETRIEVE" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="fepops.fepops.GetFepopStatusCode.SUCCESS">
+<span class="sig-name descname"><span class="pre">SUCCESS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#fepops.fepops.GetFepopStatusCode.SUCCESS" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="fepops.fepops.OpenFEPOPS">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">fepops.fepops.</span></span><span class="sig-name descname"><span class="pre">OpenFEPOPS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmeans_method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'sklearn'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'pytorchcpu'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'pytorchgpu'</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'sklearn'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_tautomers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_fepops_per_mol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">7</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_centroids_per_fepop</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">descriptor_means</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(-0.28971602,</span> <span class="pre">0.5181022,</span> <span class="pre">0.37487135,</span> <span class="pre">0.99922747,</span> <span class="pre">-0.04187301,</span> <span class="pre">1.03382471,</span> <span class="pre">0.27407036,</span> <span class="pre">0.99853436,</span> <span class="pre">0.09725517,</span> <span class="pre">1.12824307,</span> <span class="pre">0.23735556,</span> <span class="pre">0.99882914,</span> <span class="pre">0.35977538,</span> <span class="pre">0.66653514,</span> <span class="pre">0.41238282,</span> <span class="pre">0.99902545,</span> <span class="pre">5.71261449,</span> <span class="pre">6.37716992,</span> <span class="pre">6.47293777,</span> <span class="pre">6.26134733,</span> <span class="pre">6.20354385,</span> <span class="pre">6.23201498)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">descriptor_stds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(0.35110473,</span> <span class="pre">1.00839329,</span> <span class="pre">0.4838859,</span> <span class="pre">0.02769204,</span> <span class="pre">0.15418035,</span> <span class="pre">0.86446056,</span> <span class="pre">0.44583626,</span> <span class="pre">0.0381767,</span> <span class="pre">0.16095862,</span> <span class="pre">0.92079483,</span> <span class="pre">0.42526185,</span> <span class="pre">0.03413741,</span> <span class="pre">0.35756229,</span> <span class="pre">1.36093993,</span> <span class="pre">0.4921059,</span> <span class="pre">0.0311619,</span> <span class="pre">1.9668792,</span> <span class="pre">2.31266486,</span> <span class="pre">2.50699385,</span> <span class="pre">2.41269982,</span> <span class="pre">2.30018205,</span> <span class="pre">2.31527129)</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fepops/fepops.html#OpenFEPOPS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fepops.fepops.OpenFEPOPS" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>OpenFEPOPS (Feature Points) molecular similarity object</p>
+<p>Fepops allows the comparison of molecules using feature points, see the
+original publication for more information:
+<a class="reference external" href="https://doi.org/10.1021/jm049654z">https://doi.org/10.1021/jm049654z</a>. In short, featurepoints reduce the number
+of points used to represent a molecule by combining atoms and their
+properties. Typically used to compare libraries of small molecules against
+known actives in the hope of discovering biosimilars based on queries.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>kmeans_method</strong> (<em>str</em><em>, </em><em>optional</em>) – String literal denoting the method which should be used for kmeans
+calculations. May be one of “sklearn”, “pytorchgpu”, or “pytorchcpu”. If
+“sklearn” is passed then Scikit-learn’s kmeans implementation is used.
+However a faster implementation from the fast_pytorch_kmeans package can
+also be used if Pytorch is available and may be run in cpu-only mode, or
+GPU accelerated mode. Note: GPU accelerated mode should only be used if
+you are stretching the capabilities in terms of feature points for large
+molecules.  Small molecules will not benefit at all from GPU
+acceleration due to overheads.  By default “sklearn”</p></li>
+<li><p><strong>max_tautomers</strong> (<em>Union</em><em>[</em><em>int</em><em>, </em><em>None</em><em>]</em><em>, </em><em>optional</em>) – Maximum number of tautomers which should be generated. Internally, this
+implementation of FEPOPS relies upon RDKit’s TautomerEnumerator to
+generate tautomers and pass 5 to the number of tautomers to generate
+based on original FEPOPS paper. Unless the molecules (or macromolecules)
+you areworking with generate massive numbers of tautomers, this may
+optionally set as None implying that no limit should be placed on
+tautomer generation. By default 5</p></li>
+<li><p><strong>num_fepops_per_mol</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of feature points to use in the representation of a molecule.
+Literature notes that 7 has been empirically found to be a good number
+of feature points for performant representations of small molecules.
+This might be increased if you are dealing with large and very flexible
+molecules, by default 7</p></li>
+<li><p><strong>num_centroids_per_fepop</strong> (<em>int</em><em>, </em><em>optional</em>) – Each fepop is represented by a number of centres, into which atom
+properties are compressed. Literature notes that this has been
+empirically determined to be 4 for a performant representation of small
+molecules. By default 4</p></li>
+<li><p><strong>descriptor_means</strong> (<em>Tuple</em><em>[</em><em>float</em><em>, </em><em>...</em><em>]</em><em>, </em><em>optional</em>) – Due to the need to apply scaling to FEPOPS, the DUDE diversity set has
+been profiled and the means collected for all contained FEPOPS. This
+this allows centering and scaling of FEPOPS before scoring. This field
+contains default values for FEPOP means calculated with
+num_fepops_per_mol = 7, num_centroids_per_fepop=4, and kmeans_method =
+‘sklearn’. New values should be supplied if the FEPOPS object is using
+different numbers for these values.  By default (-0.28932319,0.5166312,
+0.37458883,0.99913668,-0.04193182,1.03616917,0.27327129,0.99839024,
+0.09701198,1.12969387,0.23718642,0.99865705,0.35968991,0.6649304,
+0.4123743,0.99893657,5.70852885,6.3707943,6.47354071,6.26385429,
+6.19229367,6.22946713)</p></li>
+<li><p><strong>descriptor_sds</strong> (<em>Tuple</em><em>[</em><em>float</em><em>, </em><em>...</em><em>]</em><em>, </em><em>optional</em>) – Due to the need to apply scaling to FEPOPS, the DUDE diversity set has
+been profiled and the means collected for all contained FEPOPS. This
+this allows centering and scaling of FEPOPS before scoring. This field
+contains default values for FEPOP standard deviations calculated with
+num_fepops_per_mol = 7, num_centroids_per_fepop=4, and kmeans_method =
+‘sklearn’. New values should be supplied if the FEPOPS object is using
+different numbers for these values.  By default (0.35067291,1.00802116,
+0.48380817,0.02926675,0.15400475,0.86220776,0.44542581,0.03999429,
+0.16085455,0.92042695,0.42515847,0.03655217,0.35778578,1.36108994,
+0.49210665,0.03252466,1.96446927,2.30792259,2.5024708,2.4155645,
+2.29434487,2.31437527)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – Invalid kmeans method</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="fepops.fepops.OpenFEPOPS.calc_similarity">
+<span class="sig-name descname"><span class="pre">calc_similarity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">candidate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="reference internal" href="_modules/fepops/fepops.html#OpenFEPOPS.calc_similarity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fepops.fepops.OpenFEPOPS.calc_similarity" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate FEPOPS similarity</p>
+<p>Method for calculating molecular similarity based on their OpenFEPOPS
+descriptors. Centres and scales FEPOPS descriptors using parameters
+passed upon object initialisation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>query</strong> (<em>Union</em><em>[</em><em>np.ndarray</em><em>, </em><em>str</em><em>]</em>) – A Numpy array containing the FEPOPS descriptors of the query molecule
+or a smiles string from which to generate FEPOPS descriptors for the
+query molecule. Can also be None, in which case, np.nan is returned
+as a score.</p></li>
+<li><p><strong>candidate</strong> (<em>Union</em><em>[</em><em>np.ndarray</em><em>, </em><em>str</em><em>, </em><em>None</em><em>, </em><em>list</em><em>[</em><em>np.ndarray</em><em>, </em><em>str</em><em>, </em><em>None</em><em>]</em><em>]</em><em>,</em>) – A Numpy array containing the FEPOPS descriptors of the candidate
+molecule or a smiles string from which to generate FEPOPS descriptors
+for the candidate molecule.  Can also be None, in which case, np.nan is
+returned as a score, or a list of any of these. If it is a list,
+then a list of scores against the single candidate is returned.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Fepops similarity between two molecules</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fepops.fepops.OpenFEPOPS.generate_conformers">
+<span class="sig-name descname"><span class="pre">generate_conformers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Mol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">42</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="reference internal" href="_modules/fepops/fepops.html#OpenFEPOPS.generate_conformers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fepops.fepops.OpenFEPOPS.generate_conformers" title="Permalink to this definition"></a></dt>
+<dd><p>Generate conformers with rotatable bonds</p>
+<p>Generate conformers for a molecule, enumerating rotatable bonds over 90
+degree angles. This 90 degree increment was deemed opimal in literature.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mol</strong> (<em>Chem.rdchem.Mol</em>) – The Rdkit mol object of the input molecule.</p></li>
+<li><p><strong>random_state</strong> (<em>int</em>) – Integer to use as a random state when seeding the random number
+generator.  By default 42.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A list containing mol objects of different conformers with different
+angles of rotetable bonds</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fepops.fepops.OpenFEPOPS.get_centroid_pharmacophoric_features">
+<span class="sig-name descname"><span class="pre">get_centroid_pharmacophoric_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Mol</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="_modules/fepops/fepops.html#OpenFEPOPS.get_centroid_pharmacophoric_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fepops.fepops.OpenFEPOPS.get_centroid_pharmacophoric_features" title="Permalink to this definition"></a></dt>
+<dd><p>Obtain centroids and their corresponding pharmacophoric features</p>
+<p>Obtain centroids and then calucate and assign their corresponding
+pharmacophoric features (logP, charges, HBA, HBD, and distances
+between the centroids, following the pattern used for calculation of
+matrix determinants - in the case of 4 centroids, this is:
+d1-4, d1-2, d2-3, d3-4, d1-3, d2-4)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>mol</strong> (<em>Chem.rdchem.Mol</em>) – The Rdkit mol object of the input molecule.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A Numpy array containing 22 pharmacophoric features for all conformers.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fepops.fepops.OpenFEPOPS.get_fepops">
+<span class="sig-name descname"><span class="pre">get_fepops</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Mol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_canonical</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#fepops.fepops.GetFepopStatusCode" title="fepops.fepops.GetFepopStatusCode"><span class="pre">GetFepopStatusCode</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/fepops/fepops.html#OpenFEPOPS.get_fepops"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fepops.fepops.OpenFEPOPS.get_fepops" title="Permalink to this definition"></a></dt>
+<dd><p>Get Fepops descriptors for a molecule</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>mol</strong> (<em>Union</em><em>[</em><em>str</em><em>, </em><em>None</em><em>, </em><em>Chem.rdchem.Mol</em><em>]</em>) – Molecule as a SMILES string or RDKit molecule. Can also be None,
+in which case a failure error status is returned along with None
+in place of the requested Fepops descriptors.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Returns a tuple, with the first value being a GetFepopStatusCode
+(enum) denoting SUCCESS or FAILED_TO_GENERATE. The second tuple
+element is either None (if unsuccessful), or a np.ndarray containing
+the calculated Fepops descriptors of the requested input molecule.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple[<a class="reference internal" href="#fepops.fepops.GetFepopStatusCode" title="fepops.fepops.GetFepopStatusCode">GetFepopStatusCode</a>, Union[np.ndarray, None]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fepops.fepops.OpenFEPOPS.pairwise_correlation">
+<span class="sig-name descname"><span class="pre">pairwise_correlation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">B</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fepops/fepops.html#OpenFEPOPS.pairwise_correlation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fepops.fepops.OpenFEPOPS.pairwise_correlation" title="Permalink to this definition"></a></dt>
+<dd><p>Fast method to generate pairwise correlation values (Pearson)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>A</strong> (<em>np.ndarray</em>) – First features array (1D)</p></li>
+<li><p><strong>B</strong> (<em>np.ndarray</em>) – Second features array (1D)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>2D matrix containing A vs B feature correlations</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-fepops">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-fepops" title="Permalink to this heading"></a></h2>
+<p>FEPOPS module containing the OpenFEPOPS class</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="modules.html" class="btn btn-neutral float-left" title="&lt;no title&gt;" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="fepops.fepops_persistent.html" class="btn btn-neutral float-right" title="fepops.fepops_persistent package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Yan-Kai Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

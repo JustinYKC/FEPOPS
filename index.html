@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to OpenFEPOPS’s documentation &mdash; OpenFEPOPS 1.8.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Readme" href="readme.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            OpenFEPOPS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="readme.html">Readme</a></li>
+<li class="toctree-l1"><a class="reference internal" href="readme.html#statement-of-need">Statement of need</a></li>
+<li class="toctree-l1"><a class="reference internal" href="readme.html#benchmarking">Benchmarking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="readme.html#method-description">Method description</a></li>
+<li class="toctree-l1"><a class="reference internal" href="readme.html#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="readme.html#usage">Usage</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API documentation:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="fepops.html">fepops package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">OpenFEPOPS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Welcome to OpenFEPOPS’s documentation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="welcome-to-openfepops-s-documentation">
+<h1>Welcome to OpenFEPOPS’s documentation<a class="headerlink" href="#welcome-to-openfepops-s-documentation" title="Permalink to this heading"></a></h1>
+<p>OpenFEPOPS is an open-source Python implementation of the FEPOPS molecular similarity technique enabling
+descriptor generation,comparison, and ranking of molecules in virtual screening campaigns. The central
+idea behind FEPOPS is reducing the complexity of molecules by merging of local atomic environments and
+atom properties into ‘feature points’. This compressed feature point representation has been used to
+great effect as noted in literature, helping researchers identify active and potentially therapeutically
+valuable small molecules. This implementation was recreated following the original paper:
+<a class="reference external" href="https://pubs.acs.org/doi/10.1021/jm049654z">https://pubs.acs.org/doi/10.1021/jm049654z</a></p>
+<p>Source code is available on the GitHub repo here: <a class="reference external" href="https://github.com/JustinYKC/FEPOPS">OpenFEPOPS GitHub Repository</a></p>
+<p>An online version of the GitHub README.md can be found broken down into sections below, detailing how to use the package for calculation of descriptors and subsequent molecular similarity calculations.</p>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="readme.html">Readme</a></li>
+<li class="toctree-l1"><a class="reference internal" href="readme.html#statement-of-need">Statement of need</a></li>
+<li class="toctree-l1"><a class="reference internal" href="readme.html#benchmarking">Benchmarking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="readme.html#method-description">Method description</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="readme.html#descriptor-generation"><em>Descriptor generation</em></a></li>
+<li class="toctree-l2"><a class="reference internal" href="readme.html#scoring-and-comparison-of-molecules-based-on-their-molecular-descriptors">Scoring and comparison of molecules based on their molecular descriptors</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="readme.html#installation">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="readme.html#testing">Testing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="readme.html#requirements">Requirements</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="readme.html#usage">Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="readme.html#command-line-usage">Command line usage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="readme.html#example-calculating-molecular-similarity-between-two-molecules-ibuprofen-and-diclofenac">Example: Calculating molecular similarity between two molecules (ibuprofen and diclofenac)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="readme.html#example-get-the-fepops-descriptors-for-diclofenac">Example: Get the FEPOPS descriptors for diclofenac</a></li>
+<li class="toctree-l3"><a class="reference internal" href="readme.html#example-pregenerating-descriptors-for-an-in-house-compound-archive">Example: pregenerating descriptors for an in-house compound archive</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">API documentation:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="fepops.html">fepops package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="fepops.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fepops.fepops_persistent.html">fepops.fepops_persistent package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fepops.fepops_persistent.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.fepops_persistent.html#module-fepops.fepops_persistent.fepops_persistent_abc">fepops.fepops_persistent.fepops_persistent_abc module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.fepops_persistent.html#module-fepops.fepops_persistent.fepopsdb_json">fepops.fepops_persistent.fepopsdb_json module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.fepops_persistent.html#module-fepops.fepops_persistent.fepopsdb_sqlite">fepops.fepops_persistent.fepopsdb_sqlite module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.fepops_persistent.html#module-fepops.fepops_persistent.utils">fepops.fepops_persistent.utils module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.fepops_persistent.html#module-fepops.fepops_persistent">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fepops.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fepops.html#module-fepops.fepops">fepops.fepops module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fepops.html#fepops.fepops.GetFepopStatusCode"><code class="docutils literal notranslate"><span class="pre">GetFepopStatusCode</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fepops.html#fepops.fepops.GetFepopStatusCode.FAILED_RETRIEVED_NONE"><code class="docutils literal notranslate"><span class="pre">GetFepopStatusCode.FAILED_RETRIEVED_NONE</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.html#fepops.fepops.GetFepopStatusCode.FAILED_TO_GENERATE"><code class="docutils literal notranslate"><span class="pre">GetFepopStatusCode.FAILED_TO_GENERATE</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.html#fepops.fepops.GetFepopStatusCode.FAILED_TO_RETRIEVE"><code class="docutils literal notranslate"><span class="pre">GetFepopStatusCode.FAILED_TO_RETRIEVE</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.html#fepops.fepops.GetFepopStatusCode.SUCCESS"><code class="docutils literal notranslate"><span class="pre">GetFepopStatusCode.SUCCESS</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="fepops.html#fepops.fepops.OpenFEPOPS"><code class="docutils literal notranslate"><span class="pre">OpenFEPOPS</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fepops.html#fepops.fepops.OpenFEPOPS.calc_similarity"><code class="docutils literal notranslate"><span class="pre">OpenFEPOPS.calc_similarity()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.html#fepops.fepops.OpenFEPOPS.generate_conformers"><code class="docutils literal notranslate"><span class="pre">OpenFEPOPS.generate_conformers()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.html#fepops.fepops.OpenFEPOPS.get_centroid_pharmacophoric_features"><code class="docutils literal notranslate"><span class="pre">OpenFEPOPS.get_centroid_pharmacophoric_features()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.html#fepops.fepops.OpenFEPOPS.get_fepops"><code class="docutils literal notranslate"><span class="pre">OpenFEPOPS.get_fepops()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fepops.html#fepops.fepops.OpenFEPOPS.pairwise_correlation"><code class="docutils literal notranslate"><span class="pre">OpenFEPOPS.pairwise_correlation()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fepops.html#module-fepops">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this heading"></a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+</ul>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="readme.html" class="btn btn-neutral float-right" title="Readme" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Yan-Kai Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
